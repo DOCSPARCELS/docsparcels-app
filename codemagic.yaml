@@ -6,6 +6,9 @@
 #    esattamente «DocsParcels App Store» (la usa la riga «app_store_connect» qui sotto);
 #  - nell'app su Codemagic, gruppo di variabili «firebase» con GOOGLE_SERVICE_INFO_PLIST
 #    (il file GoogleService-Info.plist in base64, segnato come «Secure»);
+#  - gruppo di variabili «ios_firma» con CERTIFICATE_PRIVATE_KEY (chiave privata RSA del
+#    certificato di distribuzione, «Secure»): con questa e la chiave API, al primo giro
+#    Codemagic crea da solo certificato e profilo App Store e poi li riusa;
 #  - APP_STORE_APPLE_ID qui sotto: il numero dell'app in App Store Connect (gia' inserito).
 
 workflows:
@@ -21,9 +24,7 @@ workflows:
       cocoapods: default
       groups:
         - firebase
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.docsparcels.app
+        - ios_firma
       vars:
         APP_STORE_APPLE_ID: "6837154046"   # numero dell'app in App Store Connect
         VERSIONE_APP: "0.1.0"
@@ -37,8 +38,11 @@ workflows:
       - name: Prove automatiche
         script: |
           flutter test
-      - name: Firma dell'app con il profilo App Store
+      - name: Firma dell'app (certificato e profilo App Store creati se mancano)
         script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "com.docsparcels.app" --type IOS_APP_STORE --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Compilazione per iPhone (numero di build = ultimo in TestFlight + 1)
         script: |
