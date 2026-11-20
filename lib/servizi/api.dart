@@ -35,24 +35,29 @@ class Api {
     return intestazioni;
   }
 
-  static Map<String, dynamic> _risposta(http.Response r) {
+  /// Corpo intero della risposta; se il server dice errore lancia ErroreApi.
+  static Map<String, dynamic> _corpo(http.Response r) {
     Map<String, dynamic> corpo = {};
     try {
       corpo = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
     } catch (_) {
-      throw ErroreApi('generico', r.statusCode);
+      throw ErroreApi(r.statusCode == 401 ? 'chiave_non_valida' : 'generico', r.statusCode);
     }
     if (r.statusCode >= 400 || corpo['success'] != true) {
       final codice = (corpo['codice'] as String?) ??
+          (corpo['documenti_oltre_peso'] == true ? 'documenti_oltre_peso' : null) ??
           (r.statusCode == 401 ? 'chiave_non_valida' : r.statusCode == 429 ? 'troppe_richieste' : 'generico');
       throw ErroreApi(codice, r.statusCode);
     }
-    return (corpo['data'] as Map<String, dynamic>?) ?? {};
+    return corpo;
   }
 
-  static Future<http.Response> _manda(Future<http.Response> Function() chiamata) async {
+  static Map<String, dynamic> _risposta(http.Response r) =>
+      (_corpo(r)['data'] as Map<String, dynamic>?) ?? {};
+
+  static Future<http.Response> _manda(Future<http.Response> Function() chiamata, {Duration tempo = _tempo}) async {
     try {
-      return await chiamata().timeout(_tempo);
+      return await chiamata().timeout(tempo);
     } on SocketException {
       throw ErroreApi('rete');
     } on HttpException {
@@ -89,6 +94,25 @@ class Api {
   /// GET /cliente/api/credito: saldo del credito prepagato ({'attivo': false} se non c'e').
   static Future<Map<String, dynamic>> credito() async =>
       _risposta(await _manda(() async => http.get(_url('/cliente/api/credito'), headers: await _intestazioni())));
+
+  /// GET /api/nazioni/elenco: tutte le nazioni con codice, nome, alias e se il CAP e' obbligatorio.
+  static Future<List<Map<String, dynamic>>> nazioni() async {
+    final corpo = _corpo(await _manda(() async => http.get(_url('/api/nazioni/elenco'), headers: await _intestazioni())));
+    return ((corpo['data'] as List?) ?? []).cast<Map<String, dynamic>>();
+  }
+
+  /// POST /cliente/api/calcola: le tariffe che il cliente vede nell'area cliente, gia' in ordine
+  /// dalla piu' economica. Il calcolo lo fa tutto il server (listini, sconti, carburante, IVA).
+  static Future<List<Map<String, dynamic>>> calcola(Map<String, dynamic> dati) async {
+    final corpo = _corpo(await _manda(() async => http.post(
+          _url('/cliente/api/calcola'),
+          headers: await _intestazioni(),
+          body: jsonEncode(dati),
+        ), tempo: const Duration(seconds: 90)));  // i corrieri esterni a volte rispondono piano
+    final servizi = ((corpo['servizi'] as List?) ?? []).cast<Map<String, dynamic>>();
+    servizi.sort((a, b) => ((a['totale'] as num?) ?? 0).compareTo((b['totale'] as num?) ?? 0));
+    return servizi;
+  }
 
   /// POST /app/api/dispositivo: il telefono riceve le notifiche di questo account.
   static Future<void> registraTelefono(String codice, String piattaforma, String lingua, bool attive) async {

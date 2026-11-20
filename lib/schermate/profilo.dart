@@ -5,6 +5,7 @@ import '../servizi/notifiche.dart';
 import '../stile.dart';
 import '../testi.dart';
 import 'entrata.dart';
+import 'preventivo.dart';
 
 /// Schermata «io»: nome, codice cliente, credito disponibile, uscita.
 class SchermataProfilo extends StatefulWidget {
@@ -141,6 +142,13 @@ class SchermataProfiloState extends State<SchermataProfilo> {
                           _credito?['attivo'] == true
                               ? euro((_credito?['saldo'] as num?) ?? 0, testi.lingua)
                               : testi.t('saldo_non_attivo'),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.calculate_outlined),
+                          label: Text(testi.t('preventivo_veloce')),
+                          onPressed: () => Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (_) => const SchermataPreventivo())),
                         ),
                       ],
                     ),

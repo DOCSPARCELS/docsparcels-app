@@ -21,6 +21,8 @@ Il primo comando crea le cartelle `android` e `ios` senza toccare `lib`. Poi:
 - Entrata (email o nome utente e password) → `POST /app/api/entra`, chiave nel portachiavi del telefono.
 - Profilo: nome, codice cliente, credito disponibile (`/app/api/io` e `/cliente/api/credito`), uscita (`/app/api/esci`).
 - Sblocco con Face ID / impronta e notifiche sul telefono (Firebase).
+- Preventivo veloce (dal profilo): partenza, arrivo, documenti o pacco, colli → `POST /cliente/api/calcola`,
+  le stesse tariffe dell'area cliente dalla più economica; nazioni da `/api/nazioni/elenco`. Niente invio.
 
 ## Lingue
 Italiano, inglese, spagnolo, francese e tedesco (`lib/testi.dart`), secondo la lingua del telefono.
