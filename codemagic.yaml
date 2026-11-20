@@ -1,0 +1,56 @@
+# Codemagic: compila la versione iPhone di Doc's & Parcels e la manda in TestFlight.
+# Si avvia a mano dal sito di Codemagic («Start new build», flusso «iPhone per TestFlight»).
+#
+# Cose da preparare una volta sola nel sito di Codemagic (vedi LEGGIMI.md):
+#  - Team settings > Integrations > Developer Portal: chiave App Store Connect chiamata
+#    esattamente «DocsParcels App Store» (la usa la riga «app_store_connect» qui sotto);
+#  - nell'app su Codemagic, gruppo di variabili «firebase» con GOOGLE_SERVICE_INFO_PLIST
+#    (il file GoogleService-Info.plist in base64, segnato come «Secure»);
+#  - APP_STORE_APPLE_ID qui sotto: il numero dell'app in App Store Connect (App Information > Apple ID).
+
+workflows:
+  ios-testflight:
+    name: iPhone per TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: DocsParcels App Store
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.docsparcels.app
+      vars:
+        APP_STORE_APPLE_ID: "0000000000"   # da sostituire con il numero vero dell'app
+        VERSIONE_APP: "0.1.0"
+    scripts:
+      - name: File di Firebase (solo durante la compilazione, mai nel repository)
+        script: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      - name: Librerie dell'app
+        script: |
+          flutter pub get
+      - name: Prove automatiche
+        script: |
+          flutter test
+      - name: Firma dell'app con il profilo App Store
+        script: |
+          xcode-project use-profiles
+      - name: Compilazione per iPhone (numero di build = ultimo in TestFlight + 1)
+        script: |
+          ULTIMA=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          flutter build ipa --release \
+            --build-name="$VERSIONE_APP" \
+            --build-number=$((ULTIMA + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

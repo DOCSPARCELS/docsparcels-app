@@ -1,0 +1,34 @@
+# File di Firebase: restano solo sul PC (cartella chiavi di Luca), mai su git o Drive
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+**/GoogleService-Info.plist
+**/google-services.json
+*.p8
+*firebase-adminsdk*.json
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+
+# iPhone
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Editor
+.idea/
+.vscode/
+*.iml
