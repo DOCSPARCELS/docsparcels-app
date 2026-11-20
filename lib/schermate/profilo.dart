@@ -5,6 +5,7 @@ import '../servizi/notifiche.dart';
 import '../stile.dart';
 import '../testi.dart';
 import 'entrata.dart';
+import 'nuova_spedizione.dart';
 import 'preventivo.dart';
 
 /// Schermata «io»: nome, codice cliente, credito disponibile, uscita.
@@ -144,6 +145,13 @@ class SchermataProfiloState extends State<SchermataProfilo> {
                               : testi.t('saldo_non_attivo'),
                         ),
                         const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.local_shipping_outlined),
+                          label: Text(testi.t('nuova_spedizione')),
+                          onPressed: () => Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (_) => const SchermataNuovaSpedizione())),
+                        ),
+                        const SizedBox(height: 12),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.calculate_outlined),
                           label: Text(testi.t('preventivo_veloce')),

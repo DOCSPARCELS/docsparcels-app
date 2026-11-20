@@ -23,6 +23,14 @@ Il primo comando crea le cartelle `android` e `ios` senza toccare `lib`. Poi:
 - Sblocco con Face ID / impronta e notifiche sul telefono (Firebase).
 - Preventivo veloce (dal profilo): partenza, arrivo, documenti o pacco, colli → `POST /cliente/api/calcola`,
   le stesse tariffe dell'area cliente dalla più economica; nazioni da `/api/nazioni/elenco`. Niente invio.
+- Nuova spedizione (dal profilo): mittente, destinatario (rubrica o a mano), colli, servizio e punti,
+  ritiro, riepilogo e invio con pagamento (credito, carta myPOS in una finestra interna, bonifico).
+  Usa le API dell'area cliente più `/cliente/api/nuova_spedizione/dati` e `/cliente/api/bozze/<id>/dati`.
+  Fuori UE con un pacco rimanda al sito (dogana).
+
+## Prove sull'emulatore col Flask del PC
+`flutter build apk --debug --dart-define=SERVER=http://10.0.2.2:5003`: senza `SERVER` l'app parla
+col gestionale online. Il collegamento in chiaro è permesso solo nella versione di prova.
 
 ## Lingue
 Italiano, inglese, spagnolo, francese e tedesco (`lib/testi.dart`), secondo la lingua del telefono.

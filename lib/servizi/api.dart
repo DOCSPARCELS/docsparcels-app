@@ -11,10 +11,16 @@ import 'notifiche.dart';
 /// Errore del gestionale: [codice] e' quello che manda il server (es. credenziali_errate),
 /// l'app lo traduce con Testi.errore().
 class ErroreApi implements Exception {
-  ErroreApi(this.codice, [this.stato]);
+  ErroreApi(this.codice, [this.stato, this.messaggio, this.corpo]);
 
   final String codice;
   final int? stato;
+
+  /// Testo dell'errore scritto dal server (gia' nella lingua del cliente), se c'e'
+  final String? messaggio;
+
+  /// Risposta completa del server, per i casi da gestire a parte (es. prezzo_aggiornato)
+  final Map<String, dynamic>? corpo;
 
   @override
   String toString() => 'ErroreApi($codice, $stato)';
@@ -47,7 +53,8 @@ class Api {
       final codice = (corpo['codice'] as String?) ??
           (corpo['documenti_oltre_peso'] == true ? 'documenti_oltre_peso' : null) ??
           (r.statusCode == 401 ? 'chiave_non_valida' : r.statusCode == 429 ? 'troppe_richieste' : 'generico');
-      throw ErroreApi(codice, r.statusCode);
+      final testo = corpo['error'];
+      throw ErroreApi(codice, r.statusCode, testo is String && testo.trim().isNotEmpty ? testo : null, corpo);
     }
     return corpo;
   }
@@ -101,6 +108,12 @@ class Api {
     return ((corpo['data'] as List?) ?? []).cast<Map<String, dynamic>>();
   }
 
+  /// GET /api/nazioni/ue: codici delle nazioni UE (fuori UE con un pacco serve la dogana).
+  static Future<Set<String>> nazioniUe() async {
+    final corpo = _corpo(await _manda(() async => http.get(_url('/api/nazioni/ue'), headers: await _intestazioni())));
+    return (((corpo['data'] as Map?)?['codici'] as List?) ?? []).map((c) => '$c'.toUpperCase()).toSet();
+  }
+
   /// POST /cliente/api/calcola: le tariffe che il cliente vede nell'area cliente, gia' in ordine
   /// dalla piu' economica. Il calcolo lo fa tutto il server (listini, sconti, carburante, IVA).
   static Future<List<Map<String, dynamic>>> calcola(Map<String, dynamic> dati) async {
@@ -113,6 +126,73 @@ class Api {
     servizi.sort((a, b) => ((a['totale'] as num?) ?? 0).compareTo((b['totale'] as num?) ?? 0));
     return servizi;
   }
+
+  // ------------------------------------------------------------ nuova spedizione (nota 367)
+
+  static Future<Map<String, dynamic>> _getCorpo(String percorso) async =>
+      _corpo(await _manda(() async => http.get(_url(percorso), headers: await _intestazioni())));
+
+  static Future<Map<String, dynamic>> _postCorpo(String percorso, Map<String, dynamic> dati,
+          {Duration tempo = _tempo}) async =>
+      _corpo(await _manda(() async => http.post(_url(percorso), headers: await _intestazioni(), body: jsonEncode(dati)),
+          tempo: tempo));
+
+  /// Mittente dall'anagrafica, tipologie, imballaggi, assicurazione, prima data valida.
+  static Future<Map<String, dynamic>> datiNuovaSpedizione() async =>
+      ((await _getCorpo('/cliente/api/nuova_spedizione/dati'))['data'] as Map<String, dynamic>?) ?? {};
+
+  /// Rubrica e indirizzi gia' usati del cliente. Il server risponde con una lista semplice.
+  static Future<List<Map<String, dynamic>>> rubrica() async {
+    final r = await _manda(() async => http.get(_url('/cliente/api/autocomplete_contatti?q=*&storico=1'),
+        headers: await _intestazioni()));
+    if (r.statusCode == 401) throw ErroreApi('chiave_non_valida', 401);
+    if (r.statusCode >= 400) throw ErroreApi('generico', r.statusCode);
+    try {
+      return ((jsonDecode(utf8.decode(r.bodyBytes)) as List?) ?? []).cast<Map<String, dynamic>>();
+    } catch (_) {
+      throw ErroreApi('generico', r.statusCode);
+    }
+  }
+
+  /// Salva in rubrica un mittente o destinatario scritto a mano.
+  static Future<void> salvaInRubrica(Map<String, dynamic> contatto) async {
+    await _postCorpo('/cliente/api/contatti/aggiungi-da-spedizione', contatto);
+  }
+
+  /// Punti dei servizi Point vicino al mittente o al destinatario, con la differenza di prezzo.
+  static Future<List<Map<String, dynamic>>> puntiServizio(Map<String, dynamic> dati) async {
+    final corpo = await _postCorpo('/cliente/api/punti_servizio', dati, tempo: const Duration(seconds: 40));
+    return ((corpo['punti'] as List?) ?? []).cast<Map<String, dynamic>>();
+  }
+
+  /// Crea o aggiorna la bozza: {spedizione_id, mos, prezzo}. Il prezzo lo rifa' il server.
+  static Future<Map<String, dynamic>> salvaBozza(Map<String, dynamic> dati) async =>
+      _postCorpo('/cliente/api/salva_bozza_spedizione', dati, tempo: const Duration(seconds: 90));
+
+  static Future<Map<String, dynamic>> datiBozza(int id) async =>
+      ((await _getCorpo('/cliente/api/bozze/$id/dati'))['data'] as Map<String, dynamic>?) ?? {};
+
+  /// Come paga il cliente: {prepagato, residuo, sufficiente, rimessa, totale, banca}.
+  static Future<Map<String, dynamic>> opzioniPagamento(int bozzaId) async =>
+      ((await _getCorpo('/cliente/api/opzioni_pagamento/$bozzaId'))['data'] as Map<String, dynamic>?) ?? {};
+
+  /// Invia la richiesta: {nuova_id, pagamento?, ...}.
+  static Future<Map<String, dynamic>> inviaSpedizione(int bozzaId, String? metodo) async =>
+      _postCorpo('/cliente/api/invia_spedizione', {'spedizione_id': bozzaId, if (metodo != null) 'metodo_pagamento': metodo},
+          tempo: const Duration(seconds: 120));
+
+  static Future<void> eliminaBozza(int bozzaId) async {
+    await _postCorpo('/cliente/api/elimina_bozze', {'ids': [bozzaId]});
+  }
+
+  /// Pagamento con carta non completato: la spedizione torna bozza.
+  static Future<void> annullaPagamento(int spedizioneId) async {
+    await _postCorpo('/cliente/api/annulla_pagamento_spedizione/$spedizioneId', {});
+  }
+
+  /// Indirizzo completo di una pagina del gestionale (pagamento myPOS).
+  static String indirizzo(String percorsoOUrl) =>
+      percorsoOUrl.startsWith('http') ? percorsoOUrl : '${Config.indirizzo}$percorsoOUrl';
 
   /// POST /app/api/dispositivo: il telefono riceve le notifiche di questo account.
   static Future<void> registraTelefono(String codice, String piattaforma, String lingua, bool attive) async {

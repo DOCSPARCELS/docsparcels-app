@@ -22,6 +22,8 @@ dependencies:
   firebase_messaging: ^17.1.0
   local_auth_android: ^2.3.0
   local_auth_darwin: ^2.0.5
+  # Pagina di pagamento myPOS dentro l'app (nota 367)
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:
