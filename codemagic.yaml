@@ -6,7 +6,7 @@
 #    esattamente «DocsParcels App Store» (la usa la riga «app_store_connect» qui sotto);
 #  - nell'app su Codemagic, gruppo di variabili «firebase» con GOOGLE_SERVICE_INFO_PLIST
 #    (il file GoogleService-Info.plist in base64, segnato come «Secure»);
-#  - APP_STORE_APPLE_ID qui sotto: il numero dell'app in App Store Connect (App Information > Apple ID).
+#  - APP_STORE_APPLE_ID qui sotto: il numero dell'app in App Store Connect (gia' inserito).
 
 workflows:
   ios-testflight:
@@ -25,7 +25,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.docsparcels.app
       vars:
-        APP_STORE_APPLE_ID: "0000000000"   # da sostituire con il numero vero dell'app
+        APP_STORE_APPLE_ID: "6837154046"   # numero dell'app in App Store Connect
         VERSIONE_APP: "0.1.0"
     scripts:
       - name: File di Firebase (solo durante la compilazione, mai nel repository)
