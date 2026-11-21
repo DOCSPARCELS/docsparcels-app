@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../servizi/api.dart';
 import '../stile.dart';
@@ -123,6 +124,119 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     }
   }
 
+  /// Nota 368 V3: chi paga manda l'etichetta al mittente, per email o con la condivisione del telefono.
+  Future<void> _etichettaAlMittente() async {
+    final t = _t;
+    final scelta = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+            child: Text(t.t('etichetta_mittente_testo'), textAlign: TextAlign.center,
+                style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.email_outlined, color: Stile.verde),
+            title: Text(t.t('invia_per_email')),
+            onTap: () => Navigator.pop(c, 'email'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.share_outlined, color: Stile.verde),
+            title: Text(t.t('condividi_whatsapp')),
+            onTap: () => Navigator.pop(c, 'whatsapp'),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (!mounted || scelta == null) return;
+    if (scelta == 'email') {
+      await _etichettaPerEmail();
+    } else {
+      await _etichettaCondivisa();
+    }
+  }
+
+  Future<void> _etichettaPerEmail() async {
+    final t = _t;
+    final mitt = (_sped?['mitt'] as Map?) ?? {};
+    final campo = TextEditingController(text: '${mitt['email'] ?? ''}'.trim().toLowerCase());
+    final email = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        title: Text(t.t('invia_etichetta_mittente'), textAlign: TextAlign.center),
+        content: TextField(
+          controller: campo,
+          keyboardType: TextInputType.emailAddress,
+          autofocus: campo.text.isEmpty,
+          decoration: InputDecoration(labelText: t.t('email_mittente')),
+        ),
+        actions: [
+          Row(children: [
+            Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: Text(t.t('annulla')))),
+            const SizedBox(width: 12),
+            Expanded(
+                child: ElevatedButton(
+                    onPressed: () => Navigator.pop(c, campo.text.trim().toLowerCase()), child: Text(t.t('invia')))),
+          ]),
+        ],
+      ),
+    );
+    campo.dispose();
+    if (!mounted || email == null) return;
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      _avviso(t.t('email_non_valida'));
+      return;
+    }
+    setState(() => _scaricando = 'etichetta');
+    try {
+      final r = await Api.etichettaAlMittente(widget.id, 'email', email: email);
+      if (mounted) _avviso('${r['messaggio'] ?? t.t('etichetta_inviata')}');
+    } on ErroreApi catch (e) {
+      if (mounted) _avviso(e.messaggio ?? t.errore(e.codice));
+    } finally {
+      if (mounted) setState(() => _scaricando = null);
+    }
+  }
+
+  /// Condivisione del telefono (si sceglie WhatsApp): il PDF dell'etichetta e il testo con il
+  /// link firmato; se il PDF non si scarica, solo il testo col link.
+  Future<void> _etichettaCondivisa() async {
+    setState(() => _scaricando = 'etichetta');
+    try {
+      final r = await Api.etichettaAlMittente(widget.id, 'whatsapp');
+      final testo = '${r['testo'] ?? r['link'] ?? ''}';
+      final file = <XFile>[];
+      final etichetta = _documenti.where((d) => d['tipo'] == 'awb').firstOrNull;
+      if (etichetta != null) {
+        try {
+          final byte = await Api.scarica(etichetta['url']!);
+          final cartella = await getTemporaryDirectory();
+          final percorso = '${cartella.path}/Etichetta_MOS_${widget.id}.pdf';
+          await File(percorso).writeAsBytes(byte, flush: true);
+          file.add(XFile(percorso, mimeType: 'application/pdf'));
+        } on ErroreApi {
+          // resta il link nel testo
+        }
+      }
+      if (!mounted) return;
+      final scatola = context.findRenderObject() as RenderBox?;
+      final zona = scatola == null ? null : scatola.localToGlobal(Offset.zero) & scatola.size;
+      if (file.isEmpty) {
+        await Share.share(testo, sharePositionOrigin: zona);
+      } else {
+        await Share.shareXFiles(file, text: testo, sharePositionOrigin: zona);
+      }
+    } on ErroreApi catch (e) {
+      if (mounted) _avviso(e.messaggio ?? _t.errore(e.codice));
+    } finally {
+      if (mounted) setState(() => _scaricando = null);
+    }
+  }
+
   void _avviso(String testo) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo, textAlign: TextAlign.center)));
   }
@@ -199,6 +313,18 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
                   style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
           ],
         ),
+        if (s['ruolo'] == 'mittente') ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Stile.verde.withValues(alpha: 0.10),
+              border: const Border(left: BorderSide(color: Stile.verde, width: 4)),
+              borderRadius: Stile.angoli,
+            ),
+            child: Text(t.t('solo_mittente'), style: const TextStyle(fontSize: 13)),
+          ),
+        ],
         const SizedBox(height: 16),
         _riga(t.t('data_spedizione'), '${s['data'] ?? ''}'),
         _riga(t.t('servizio'), [s['servizio'], s['vettore']].where((v) => v != null && '$v'.isNotEmpty).join(' · ')),
@@ -243,6 +369,17 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
                 onPressed: () => _apriDocumento(d),
               ),
             ),
+          if (s['invia_etichetta_mittente'] == true) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: _scaricando == 'etichetta'
+                  ? const SizedBox(
+                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.send_outlined),
+              label: Text(t.t('invia_etichetta_mittente')),
+              onPressed: _scaricando == null ? _etichettaAlMittente : null,
+            ),
+          ],
         ],
       ],
     );

@@ -27,6 +27,8 @@ dependencies:
   # Documenti della spedizione: scaricati con la chiave e aperti col visualizzatore del telefono (nota 368)
   path_provider: ^2.1.4
   open_filex: ^4.5.0
+  # Etichetta al mittente con la condivisione del telefono (WhatsApp e altre app, nota 368 V3)
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
