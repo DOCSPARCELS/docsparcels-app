@@ -6,6 +6,7 @@ import 'servizi/biometria.dart';
 import 'servizi/chiave.dart';
 import 'servizi/lingua.dart';
 import 'servizi/notifiche.dart';
+import 'schermate/anteprima_grafica.dart';
 import 'schermate/entrata.dart';
 import 'schermate/profilo.dart';
 import 'schermate/sblocco.dart';
@@ -53,11 +54,14 @@ class AppDocsParcels extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: conSblocco
-            ? const SchermataSblocco()
-            : conChiave
-                ? const SchermataProfilo()
-                : const SchermataEntrata(),
+        // Build di prova della grafica (nota 373 V2): --dart-define=ANTEPRIMA_GRAFICA=true
+        home: const bool.fromEnvironment('ANTEPRIMA_GRAFICA')
+            ? const AnteprimaGrafica()
+            : conSblocco
+                ? const SchermataSblocco()
+                : conChiave
+                    ? const SchermataProfilo()
+                    : const SchermataEntrata(),
       ),
     );
   }
