@@ -24,6 +24,9 @@ dependencies:
   local_auth_darwin: ^2.0.5
   # Pagina di pagamento myPOS dentro l'app (nota 367)
   webview_flutter: ^4.10.0
+  # Documenti della spedizione: scaricati con la chiave e aperti col visualizzatore del telefono (nota 368)
+  path_provider: ^2.1.4
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_test:

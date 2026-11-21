@@ -21,6 +21,13 @@ class Stile {
         border: OutlineInputBorder(borderRadius: angoli),
         focusedBorder: OutlineInputBorder(borderRadius: angoli, borderSide: BorderSide(color: verde)),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: verde,
+          side: const BorderSide(color: verde),
+          shape: const RoundedRectangleBorder(borderRadius: angoli),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: verdePulsanti,

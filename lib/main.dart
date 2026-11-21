@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'servizi/biometria.dart';
 import 'servizi/chiave.dart';
+import 'servizi/notifiche.dart';
 import 'schermate/entrata.dart';
 import 'schermate/profilo.dart';
 import 'schermate/sblocco.dart';
@@ -14,12 +15,13 @@ Future<void> main() async {
   try {
     // Configurazione da google-services.json (Android) / GoogleService-Info.plist (iPhone)
     await Firebase.initializeApp();
+    // Toccando una notifica di spedizione si apre il suo dettaglio, dopo profilo e sblocco
+    await Notifiche.ascoltaTocchi();
   } catch (_) {
     // senza Firebase l'app funziona lo stesso, solo senza notifiche
   }
   // Con una chiave gia' salvata si apre il profilo (o prima lo sblocco con Face ID /
   // impronta, se scelto); se la chiave non vale piu', il profilo riporta all'entrata.
-  // Toccando una notifica l'app si apre qui: per ora sul profilo.
   final chiave = await ArchivioChiave.leggi();
   final conChiave = chiave != null && chiave.isNotEmpty;
   final conSblocco = conChiave && await Biometria.scelta() == 'si';
@@ -37,6 +39,7 @@ class AppDocsParcels extends StatelessWidget {
     return MaterialApp(
       title: "Doc's & Parcels",
       debugShowCheckedModeBanner: false,
+      navigatorKey: Notifiche.navigatore,
       theme: Stile.tema(),
       supportedLocales: const [Locale('it'), Locale('en'), Locale('es'), Locale('fr'), Locale('de')],
       localizationsDelegates: const [

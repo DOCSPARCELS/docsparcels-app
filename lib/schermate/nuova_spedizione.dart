@@ -15,7 +15,10 @@ import 'profilo.dart';
 /// Un passo alla volta: mittente, destinatario, colli, servizio, ritiro, riepilogo e invio.
 /// La bozza si salva sul server a ogni passo, quindi si ritrova anche sul sito.
 class SchermataNuovaSpedizione extends StatefulWidget {
-  const SchermataNuovaSpedizione({super.key});
+  const SchermataNuovaSpedizione({super.key, this.bozzaId});
+
+  /// Bozza da riprendere (da «Le mie spedizioni», nota 368); null = spedizione nuova
+  final int? bozzaId;
 
   @override
   State<SchermataNuovaSpedizione> createState() => _SchermataNuovaSpedizioneState();
@@ -155,11 +158,71 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       _dest.nazione = _nazione('IT');
       _dataSpedizione = '${_dati['prima_data_spedizione'] ?? ''}';
       _colli.first.imballaggio = _imballaggioPredefinito();
+      if (widget.bozzaId != null) _compilaDaBozza(await Api.datiBozza(widget.bozzaId!));
+      if (!mounted) return;
       setState(() => _attesa = false);
     } on ErroreApi catch (e) {
       await _gestisciErrore(e);
       if (mounted) setState(() => _attesa = false);
     }
+  }
+
+  /// Bozza ripresa: si riparte dal primo passo con i dati gia' scritti. Servizio e punti si
+  /// rifanno al passo del servizio, come per una spedizione nuova.
+  void _compilaDaBozza(Map<String, dynamic> dati) {
+    final b = (dati['bozza'] as Map?)?.cast<String, dynamic>() ?? {};
+    String v(String chiave) => '${b[chiave] ?? ''}'.trim();
+    Map<String, dynamic> sezione(String pre) => {
+          for (final campo in ['societa', 'contatto', 'indirizzo', 'cap', 'citta', 'provincia', 'telefono', 'email'])
+            campo: v('${pre}_$campo'),
+        };
+    _bozzaId = widget.bozzaId;
+    _mos = v('mos').isEmpty ? null : v('mos');
+    if (v('mitt_societa').isNotEmpty || v('mitt_indirizzo').isNotEmpty) {
+      _mitt.compila(sezione('mitt'), _nazione(v('mitt_codice_nazione')) ?? _mitt.nazione);
+      _mitt.codiceRubrica = v('mitt_codice_rubrica').isEmpty ? null : v('mitt_codice_rubrica');
+    }
+    _dest.compila(sezione('dest'), _nazione(v('dest_codice_nazione')) ?? _nazione('IT'));
+    _dest.codiceRubrica = v('dest_codice_rubrica').isEmpty ? null : v('dest_codice_rubrica');
+    _descrizione.text = v('descrizione_contenuto');
+    // la scelta azienda/privato sta in residenziale_radio; «residenziale» e' l'importo
+    final res = int.tryParse(v('residenziale_radio'));
+    _residenziale = res == null ? null : (res == 1 ? 1 : 0);
+    if (v('data_spedizione').length >= 10 && v('data_spedizione').compareTo(_dataSpedizione ?? '') > 0) {
+      _dataSpedizione = v('data_spedizione').substring(0, 10);
+    }
+    final colli = ((dati['colli'] as List?) ?? []).cast<Map<String, dynamic>>();
+    if (colli.isNotEmpty) {
+      final docs = _tipologia('DOCS');
+      _documenti = docs != null && colli.first['tipologia'] == docs;
+      for (final c in _colli) {
+        c.dispose();
+      }
+      _colli
+        ..clear()
+        ..addAll(colli.map((c) {
+          String n(dynamic x) {
+            final numero = x is num ? x : num.tryParse('$x');
+            if (numero == null || numero == 0) return '';
+            return numero == numero.roundToDouble() ? numero.toStringAsFixed(0) : '$numero'.replaceAll('.', ',');
+          }
+          final collo = _Collo()
+            ..imballaggio = c['imballaggio'] as int? ?? _imballaggioPredefinito();
+          collo.peso.text = n(c['peso']);
+          collo.lunghezza.text = n(c['lunghezza']);
+          collo.larghezza.text = n(c['larghezza']);
+          collo.altezza.text = n(c['altezza']);
+          return collo;
+        }));
+    }
+    final scelta = v('ritiro_scelta').toLowerCase();
+    if (scelta == 'si' || scelta == 'no') _ritiro = scelta == 'si';
+    if (v('ritiro_data').length >= 10) _ritiroData = v('ritiro_data').substring(0, 10);
+    for (final chiave in _orari.keys.toList()) {
+      if (RegExp(r'^\d{2}:\d{2}').hasMatch(v(chiave))) _orari[chiave] = v(chiave).substring(0, 5);
+    }
+    _puntoRitiro.text = v('ritiro_punto');
+    _noteRitiro.text = v('ritiro_istruzioni_note');
   }
 
   Map<String, dynamic>? _nazione(String codice) =>

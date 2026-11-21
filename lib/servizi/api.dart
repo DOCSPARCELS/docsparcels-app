@@ -190,6 +190,105 @@ class Api {
     await _postCorpo('/cliente/api/annulla_pagamento_spedizione/$spedizioneId', {});
   }
 
+  // ------------------------------------------------------------ le mie spedizioni (nota 368)
+
+  /// Elenco come nel sito: stato '' (tutte), 'transito', 'consegnate', 'bozze'.
+  /// {spedizioni: [...], pagina, pagine, totale}
+  static Future<Map<String, dynamic>> leMieSpedizioni({String stato = '', String cerca = '', int pagina = 1}) async {
+    final parametri = Uri(queryParameters: {
+      'stato': stato,
+      'search': cerca,
+      'page': '$pagina',
+      'page_size': '25',
+    }).query;
+    return ((await _getCorpo('/cliente/api/le_mie_spedizioni?$parametri'))['data'] as Map<String, dynamic>?) ?? {};
+  }
+
+  /// Riepilogo della spedizione (stato, servizio, colli, mittente, destinatario, totale).
+  /// [vecchia] = spedizione del gestionale precedente.
+  static Future<Map<String, dynamic>> spedizione(int id, {bool vecchia = false}) async =>
+      ((await _getCorpo(vecchia ? '/cliente/api/anteprima-vecchia/$id' : '/cliente/api/anteprima/$id'))['data']
+          as Map<String, dynamic>?) ??
+      {};
+
+  /// Passaggi del tracciamento, dal piu' recente: {data, ora, testo, luogo}.
+  /// Il server li manda in due forme (dai corrieri o dalla cache): qui diventano una sola.
+  static Future<List<Map<String, String>>> tracciamento(int id) async {
+    final corpo = await _getCorpo('/api/tracking/tracking/spedizioni/$id/events');
+    String testo(dynamic v) => v == null ? '' : '$v'.trim();
+    return [
+      for (final e in ((corpo['events'] as List?) ?? []).cast<Map<String, dynamic>>())
+        {
+          'data': dataBreve(testo(e['data'] ?? e['date'])),
+          'ora': testo(e['ora'] ?? e['time']),
+          'testo': frase(testo(e['commento_personalizzato']).isNotEmpty
+              ? testo(e['commento_personalizzato'])
+              : testo(e['commento'] ?? e['description'])),
+          'luogo': nomeProprio(testo(e['location']).isNotEmpty ? testo(e['location']) : testo(e['city'])),
+        }
+    ];
+  }
+
+  /// AAAA-MM-GG (o GG/MM/AAAA) -> gg.mm.aa; il resto com'e'.
+  static String dataBreve(String v) {
+    final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(v);
+    if (iso != null) return '${iso[3]}.${iso[2]}.${iso[1]!.substring(2)}';
+    final barre = RegExp(r'^(\d{2})/(\d{2})/(\d{2,4})$').firstMatch(v);
+    if (barre != null) return '${barre[1]}.${barre[2]}.${barre[3]!.substring(barre[3]!.length - 2)}';
+    return v;
+  }
+
+  static bool _stampatello(String v) => v.contains(RegExp(r'[A-Z]')) && v == v.toUpperCase();
+
+  /// Testo dei corrieri in stampatello: solo la prima lettera maiuscola.
+  static String frase(String v) {
+    if (!_stampatello(v)) return v;
+    final minuscolo = v.toLowerCase();
+    return minuscolo.isEmpty ? v : minuscolo[0].toUpperCase() + minuscolo.substring(1);
+  }
+
+  static const _piccole = {'di', 'de', 'del', 'della', 'dei', 'da', 'il', 'lo', 'la', 'e', 'o'};
+
+  /// Luoghi in stampatello: maiuscola a ogni parola, sigle fra parentesi e nazioni di due lettere intatte.
+  static String nomeProprio(String v) {
+    if (!_stampatello(v)) return v;
+    var primo = true;
+    return v.split(' ').map((p) {
+      final parola = p;
+      final e = primo;
+      primo = false;
+      if (RegExp(r'^\(?[A-Z]{2}\)?,?$').hasMatch(parola) && !e) return parola;
+      final m = parola.toLowerCase();
+      if (!e && _piccole.contains(m)) return m;
+      return m.split('-').map((x) => x.isEmpty ? x : x[0].toUpperCase() + x.substring(1)).join('-');
+    }).join(' ');
+  }
+
+  /// Documenti scaricabili: [{tipo: awb|proforma|allegato|dogana|reso, nome, url}].
+  static Future<List<Map<String, String>>> documenti(int id) async {
+    final d = ((await _getCorpo('/api/spedizioni/$id/documenti'))['documenti'] as Map<String, dynamic>?) ?? {};
+    final voci = <Map<String, String>>[];
+    if (d['awb_url'] != null) voci.add({'tipo': 'awb', 'nome': '', 'url': '${d['awb_url']}'});
+    if (d['proforma_url'] != null) voci.add({'tipo': 'proforma', 'nome': '', 'url': '${d['proforma_url']}'});
+    for (final a in ((d['ddt_allegati'] as List?) ?? []).cast<Map<String, dynamic>>()) {
+      voci.add({'tipo': 'allegato', 'nome': '${a['nome_originale'] ?? ''}', 'url': '${a['url']}'});
+    }
+    for (final a in ((d['documenti_doganali_manuali'] as List?) ?? []).cast<Map<String, dynamic>>()) {
+      voci.add({'tipo': 'dogana', 'nome': '${a['nome'] ?? a['tipo'] ?? ''}', 'url': '${a['url']}'});
+    }
+    if (d['reverse_qr_url'] != null) voci.add({'tipo': 'reso', 'nome': '', 'url': '${d['reverse_qr_url']}'});
+    return voci;
+  }
+
+  /// Scarica un documento con la chiave dell'app (i PDF non si aprono senza).
+  static Future<List<int>> scarica(String percorsoOUrl) async {
+    final r = await _manda(() async => http.get(Uri.parse(indirizzo(percorsoOUrl)), headers: await _intestazioni()),
+        tempo: const Duration(seconds: 60));
+    if (r.statusCode == 401) throw ErroreApi('chiave_non_valida', 401);
+    if (r.statusCode >= 400 || r.bodyBytes.isEmpty) throw ErroreApi('documento_non_disponibile', r.statusCode);
+    return r.bodyBytes;
+  }
+
   /// Indirizzo completo di una pagina del gestionale (pagamento myPOS).
   static String indirizzo(String percorsoOUrl) =>
       percorsoOUrl.startsWith('http') ? percorsoOUrl : '${Config.indirizzo}$percorsoOUrl';

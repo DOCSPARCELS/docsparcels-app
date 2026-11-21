@@ -5,6 +5,7 @@ import '../servizi/notifiche.dart';
 import '../stile.dart';
 import '../testi.dart';
 import 'entrata.dart';
+import 'le_mie_spedizioni.dart';
 import 'nuova_spedizione.dart';
 import 'preventivo.dart';
 
@@ -48,6 +49,8 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       });
       // Notifiche sul telefono: permesso e registrazione (non blocca la schermata)
       Notifiche.attiva(Testi.di(context).lingua);
+      // Una notifica toccata ad app chiusa apre ora il dettaglio della spedizione
+      Notifiche.profiloPronto();
     } on ErroreApi catch (e) {
       if (e.codice == 'chiave_non_valida') {
         await Api.esci();
@@ -145,6 +148,13 @@ class SchermataProfiloState extends State<SchermataProfilo> {
                               : testi.t('saldo_non_attivo'),
                         ),
                         const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.list_alt_outlined),
+                          label: Text(testi.t('le_mie_spedizioni')),
+                          onPressed: () => Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (_) => const SchermataLeMieSpedizioni())),
+                        ),
+                        const SizedBox(height: 12),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.local_shipping_outlined),
                           label: Text(testi.t('nuova_spedizione')),
