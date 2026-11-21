@@ -6,7 +6,7 @@ import 'servizi/biometria.dart';
 import 'servizi/chiave.dart';
 import 'servizi/lingua.dart';
 import 'servizi/notifiche.dart';
-import 'schermate/anteprima_grafica.dart';
+import 'servizi/tema.dart';
 import 'schermate/entrata.dart';
 import 'schermate/profilo.dart';
 import 'schermate/sblocco.dart';
@@ -25,6 +25,7 @@ Future<void> main() async {
   // Con una chiave gia' salvata si apre il profilo (o prima lo sblocco con Face ID /
   // impronta, se scelto); se la chiave non vale piu', il profilo riporta all'entrata.
   await LinguaApp.carica();
+  await TemaApp.carica();
   final chiave = await ArchivioChiave.leggi();
   final conChiave = chiave != null && chiave.isNotEmpty;
   final conSblocco = conChiave && await Biometria.scelta() == 'si';
@@ -39,29 +40,35 @@ class AppDocsParcels extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // La lingua scelta nel profilo (nota 372) cambia tutta l'app subito; senza scelta, quella del telefono
-    return ValueListenableBuilder<Locale?>(
-      valueListenable: LinguaApp.scelta,
-      builder: (_, lingua, __) => MaterialApp(
-        title: "Doc's & Parcels",
-        debugShowCheckedModeBanner: false,
-        navigatorKey: Notifiche.navigatore,
-        theme: Stile.tema(),
-        locale: lingua,
-        supportedLocales: const [Locale('it'), Locale('en'), Locale('es'), Locale('fr'), Locale('de')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        // Build di prova della grafica (nota 373 V2): --dart-define=ANTEPRIMA_GRAFICA=true
-        home: const bool.fromEnvironment('ANTEPRIMA_GRAFICA')
-            ? const AnteprimaGrafica()
-            : conSblocco
-                ? const SchermataSblocco()
-                : conChiave
-                    ? const SchermataProfilo()
-                    : const SchermataEntrata(),
+    // Lingua (nota 372) e tema (nota 373 V3) scelti nel profilo cambiano tutta l'app subito;
+    // senza scelta valgono quelli del telefono
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: TemaApp.scelta,
+      builder: (_, tema, __) => ValueListenableBuilder<Locale?>(
+        valueListenable: LinguaApp.scelta,
+        builder: (_, lingua, __) => MaterialApp(
+          title: "Doc's & Parcels",
+          debugShowCheckedModeBanner: false,
+          navigatorKey: Notifiche.navigatore,
+          theme: Stile.tema(scuro: false),
+          darkTheme: Stile.tema(scuro: true),
+          themeMode: tema,
+          locale: lingua,
+          supportedLocales: const [Locale('it'), Locale('en'), Locale('es'), Locale('fr'), Locale('de')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          // --dart-define=PROVA_ENTRATA=true: solo per le prove, apre l'accesso senza togliere la chiave
+          home: const bool.fromEnvironment('PROVA_ENTRATA')
+              ? const SchermataEntrata()
+              : conSblocco
+                  ? const SchermataSblocco()
+                  : conChiave
+                      ? const SchermataProfilo()
+                      : const SchermataEntrata(),
+        ),
       ),
     );
   }

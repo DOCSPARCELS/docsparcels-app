@@ -35,7 +35,7 @@ class RiquadroBonifico {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(r[0], style: const TextStyle(color: Stile.grigio, fontSize: 12)),
-                subtitle: Text(r[1], style: const TextStyle(color: Colors.white, fontSize: 14)),
+                subtitle: Text(r[1], style: TextStyle(color: context.colori.testo, fontSize: 14)),
                 trailing: IconButton(
                   tooltip: t.t('copia'),
                   icon: const Icon(Icons.copy, size: 18, color: Stile.verde),

@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../servizi/api.dart';
 import '../stile.dart';
+import '../widget/barra.dart';
 import '../testi.dart';
 import 'entrata.dart';
 import 'profilo.dart';
@@ -242,6 +243,12 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo, textAlign: TextAlign.center)));
   }
 
+  /// MOS a gruppi: 5557171 -> 555 7171
+  static String _mosGruppi(int mos) {
+    final s = '$mos';
+    return s.length == 7 ? '${s.substring(0, 3)} ${s.substring(3)}' : s;
+  }
+
   static Color _colore(String? esadecimale) {
     final testo = (esadecimale ?? '').replaceAll('#', '').trim();
     final valore = int.tryParse(testo, radix: 16);
@@ -267,12 +274,9 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
   Widget build(BuildContext context) {
     final t = _t;
     return Scaffold(
-      appBar: AppBar(
-        title: Text('MOS ${widget.id}'),
-        actions: [
-          IconButton(tooltip: t.t('aggiorna'), icon: const Icon(Icons.refresh), onPressed: _attesa ? null : _carica),
-        ],
-      ),
+      appBar: barraApp(context, titolo: 'MOS ${_mosGruppi(widget.id)}', azioni: [
+        IconButton(tooltip: t.t('aggiorna'), icon: const Icon(Icons.refresh), onPressed: _attesa ? null : _carica),
+      ]),
       body: SafeArea(
         child: _attesa
             ? const Center(child: CircularProgressIndicator())

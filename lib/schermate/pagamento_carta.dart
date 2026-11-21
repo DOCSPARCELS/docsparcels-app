@@ -3,6 +3,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../servizi/api.dart';
 import '../stile.dart';
+import '../widget/barra.dart';
 import '../testi.dart';
 
 /// Esito del pagamento con carta nella pagina myPOS aperta dentro l'app.
@@ -65,9 +66,10 @@ class _SchermataPagamentoCartaState extends State<SchermataPagamentoCarta> {
   Widget build(BuildContext context) {
     final testi = Testi.di(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(testi.t('pagamento_carta')),
-        leading: IconButton(
+      appBar: barraApp(
+        context,
+        titolo: testi.t('pagamento_carta'),
+        inizio: IconButton(
           tooltip: testi.t('annulla'),
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(EsitoCarta.chiuso),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../servizi/api.dart';
 import '../stile.dart';
 import '../testi.dart';
+import '../widget/barra.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
 import 'profilo.dart';
@@ -293,7 +294,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           border: const Border(left: BorderSide(color: Stile.verde, width: 4)),
-          color: Colors.white.withValues(alpha: 0.05),
+          color: context.colori.card,
           borderRadius: Stile.angoli,
         ),
         child: Row(
@@ -316,7 +317,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
   Widget build(BuildContext context) {
     final testi = Testi.di(context);
     return Scaffold(
-      appBar: AppBar(title: Text(testi.t('preventivo_veloce'))),
+      appBar: barraApp(context, titolo: testi.t('preventivo_veloce')),
       // Un tocco fuori dai campi chiude la tastiera
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,

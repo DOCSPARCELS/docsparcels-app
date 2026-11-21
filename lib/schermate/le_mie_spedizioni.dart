@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../servizi/api.dart';
 import '../stile.dart';
+import '../widget/barra.dart';
 import '../testi.dart';
 import 'dettaglio_spedizione.dart';
 import 'entrata.dart';
@@ -137,9 +138,10 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
   Widget build(BuildContext context) {
     final t = _t;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(t.t('le_mie_spedizioni')),
-        bottom: TabBar(
+      appBar: barraApp(
+        context,
+        titolo: t.t('le_mie_spedizioni'),
+        sotto: TabBar(
           controller: _schede,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
@@ -256,7 +258,8 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
       onTap: () => _apri(r),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(border: Border.all(color: const Color(0xFF444444)), borderRadius: Stile.angoli),
+        decoration: BoxDecoration(
+            color: context.colori.card, border: Border.all(color: context.colori.bordo), borderRadius: Stile.angoli),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../servizi/api.dart';
 import '../stile.dart';
 import '../testi.dart';
+import '../widget/barra.dart';
 import '../widget/riquadro_bonifico.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
@@ -620,7 +621,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Stile.sfondo,
+      backgroundColor: context.colori.fondo,
       shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
       builder: (_) => _SceltaRubrica(voci: _rubrica!, testi: t),
     );
@@ -672,7 +673,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Stile.sfondo,
+      backgroundColor: context.colori.fondo,
       shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
       builder: (_) => _SceltaPunto(
           punti: punti, testi: t, euro: _euro, titolo: t.t(ruolo == 'mittente' ? 'punto_partenza' : 'punto_arrivo')),
@@ -909,7 +910,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             border: Border(left: BorderSide(color: s['id'] == id ? Stile.verde : Stile.grigio, width: 4)),
-            color: s['id'] == id ? Stile.verde.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.05),
+            color: s['id'] == id ? Stile.verde.withValues(alpha: 0.12) : context.colori.card,
             borderRadius: Stile.angoli,
           ),
           child: ListTile(
@@ -1167,7 +1168,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(t.t('nuova_spedizione'))),
+        appBar: barraApp(context, titolo: t.t('nuova_spedizione')),
         body: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),
@@ -1176,7 +1177,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
                 ? const Center(child: CircularProgressIndicator())
                 : Column(children: [
                     LinearProgressIndicator(
-                        value: (_passo + 1) / _passi, color: Stile.verde, backgroundColor: Colors.white12),
+                        value: (_passo + 1) / _passi, color: Stile.verde, backgroundColor: context.colori.bordo),
                     Expanded(
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

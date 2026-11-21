@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../servizi/api.dart';
 import '../servizi/biometria.dart';
 import '../stile.dart';
+import '../widget/barra.dart';
 import '../testi.dart';
 import 'entrata.dart';
 import 'profilo.dart';
@@ -55,10 +56,8 @@ class _SchermataSbloccoState extends State<SchermataSblocco> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text("Doc's & Parcels",
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Stile.verde)),
-                  const SizedBox(height: 32),
+                  const Center(child: LogoApp(altezza: 72)),
+                  const SizedBox(height: 40),
                   const Icon(Icons.fingerprint, size: 72, color: Stile.verde),
                   const SizedBox(height: 32),
                   ElevatedButton(onPressed: _attesa ? null : _sblocca, child: Text(testi.t('sblocca'))),

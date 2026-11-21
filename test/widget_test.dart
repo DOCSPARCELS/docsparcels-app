@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:docsparcels_app/main.dart';
 import 'package:docsparcels_app/schermate/profilo.dart';
 import 'package:docsparcels_app/testi.dart';
+import 'package:docsparcels_app/widget/barra.dart';
 
 void main() {
   test('i testi esistono nelle tre lingue', () {
@@ -17,7 +18,8 @@ void main() {
   testWidgets('senza chiave si apre la schermata di entrata', (tester) async {
     await tester.pumpWidget(const AppDocsParcels(conChiave: false));
     await tester.pump();
-    expect(find.text("Doc's & Parcels"), findsOneWidget);
+    // Nota 373 V3: al posto della scritta c'e' il logo
+    expect(find.byType(LogoApp), findsOneWidget);
   });
 
   test('credito con il separatore delle migliaia', () {

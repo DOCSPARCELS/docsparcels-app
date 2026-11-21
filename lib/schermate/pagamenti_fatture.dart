@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../servizi/api.dart';
 import '../stile.dart';
+import '../widget/barra.dart';
 import '../testi.dart';
 import '../widget/riquadro_bonifico.dart';
 import 'dettaglio_spedizione.dart';
@@ -132,9 +133,10 @@ class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> w
   Widget build(BuildContext context) {
     final t = Testi.di(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(t.t('pagamenti_fatture')),
-        bottom: TabBar(
+      appBar: barraApp(
+        context,
+        titolo: t.t('pagamenti_fatture'),
+        sotto: TabBar(
           controller: _schede,
           indicatorColor: Stile.verde,
           labelColor: Stile.verde,
@@ -552,7 +554,7 @@ class _SchermataFatturaState extends State<SchermataFattura> {
         if (!fatto) Navigator.of(context).pop(_cambiato);
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(f == null ? t.t('fattura') : '${t.t('fattura')} ${f['numero']}')),
+        appBar: barraApp(context, titolo: f == null ? t.t('fattura') : '${t.t('fattura')} ${f['numero']}'),
         body: SafeArea(
           child: _attesa && f == null
               ? const Center(child: CircularProgressIndicator())
@@ -831,7 +833,8 @@ class _Riquadro extends StatelessWidget {
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(border: Border.all(color: const Color(0xFF444444)), borderRadius: Stile.angoli),
+            decoration: BoxDecoration(
+                color: context.colori.card, border: Border.all(color: context.colori.bordo), borderRadius: Stile.angoli),
             child: child,
           ),
         ),

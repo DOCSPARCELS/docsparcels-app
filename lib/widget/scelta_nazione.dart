@@ -16,7 +16,7 @@ class SceltaNazione extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Stile.sfondo,
+      backgroundColor: context.colori.fondo,
       shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
       builder: (_) => SceltaNazione(nazioni: nazioni, testi: Testi.di(context)),
     );

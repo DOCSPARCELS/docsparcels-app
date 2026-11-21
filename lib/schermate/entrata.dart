@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../servizi/api.dart';
 import '../servizi/biometria.dart';
+import '../servizi/lingua.dart';
 import '../stile.dart';
 import '../testi.dart';
+import '../widget/barra.dart';
 import 'profilo.dart';
 
 /// Schermata di entrata: email (o nome utente) e password.
@@ -100,10 +102,16 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text("Doc's & Parcels",
+                  // Nota 373 V3: logo centrato in alto, poi il saluto
+                  const Center(child: LogoApp(altezza: 72)),
+                  const SizedBox(height: 36),
+                  Text(testi.t('bentornato'),
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Stile.verde)),
-                  const SizedBox(height: 32),
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: context.colori.testo)),
+                  const SizedBox(height: 6),
+                  Text(testi.t('entra_con_account'),
+                      textAlign: TextAlign.center, style: const TextStyle(color: Stile.grigio)),
+                  const SizedBox(height: 28),
                   TextField(
                     controller: _login,
                     keyboardType: TextInputType.emailAddress,
@@ -137,6 +145,21 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(testi.t('entra')),
                   ),
+                  const SizedBox(height: 40),
+                  // Lingua dell'app, anche prima di entrare
+                  Wrap(alignment: WrapAlignment.center, spacing: 4, children: [
+                    for (final l in Testi.lingue)
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: testi.lingua == l ? Stile.verde : Stile.grigio,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(0, 36),
+                        ),
+                        onPressed: () => LinguaApp.imposta(l),
+                        child: Text(testi.t('lingua_$l'),
+                            style: TextStyle(fontWeight: testi.lingua == l ? FontWeight.w700 : FontWeight.w500)),
+                      ),
+                  ]),
                 ],
               ),
             ),

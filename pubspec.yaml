@@ -34,6 +34,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  # Schermata di avvio nativa (nota 373 V3): si rigenera con «dart run flutter_native_splash:create»
+  flutter_native_splash: ^2.4.4
+
+# Avvio tutto bianco con il logo (scelta B di Luca). Da Android 12 il sistema mostra solo
+# un'icona rotonda al centro: li' c'e' il globo.
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/immagini/logo_avvio.png
+  android_12:
+    color: "#FFFFFF"
+    image: assets/immagini/globo_avvio_android12.png
+    icon_background_color: "#FFFFFF"
 
 flutter:
   uses-material-design: true

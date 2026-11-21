@@ -4,7 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import '../config.dart';
 import '../servizi/api.dart';
 import '../servizi/lingua.dart';
+import '../servizi/tema.dart';
 import '../stile.dart';
+import '../widget/barra.dart';
 import '../testi.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
@@ -231,6 +233,23 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
 
   // ------------------------------------------------------------------ lingua
 
+  /// Esci da questo telefono (prima era nella pagina principale)
+  Future<void> _esci() async {
+    final t = Testi.di(context);
+    final si = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        content: Text(t.t('conferma_uscita'), textAlign: TextAlign.center),
+        actions: [_dueBottoni(c, t.t('no'), t.t('si'))],
+      ),
+    );
+    if (si != true || !mounted) return;
+    await Api.esci();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SchermataEntrata()), (_) => false);
+  }
+
   Future<void> _lingua(String lingua) async {
     await LinguaApp.imposta(lingua);
     try {
@@ -249,7 +268,7 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
         if (!fatto) Navigator.of(context).pop(_cambiato);
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(t.t('il_mio_profilo'))),
+        appBar: barraApp(context, titolo: t.t('il_mio_profilo')),
         body: SafeArea(
           child: _attesa && _account == null
               ? const Center(child: CircularProgressIndicator())
@@ -404,7 +423,29 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
             onSelected: (_) => _lingua(l),
           ),
       ]),
+      const SizedBox(height: 28),
+
+      // --------------------------------------------------------- aspetto (nota 373 V3)
+      _Titolo(t.t('aspetto')),
+      ValueListenableBuilder<ThemeMode>(
+        valueListenable: TemaApp.scelta,
+        builder: (_, modo, __) => Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final (valore, testo) in [
+            (ThemeMode.system, t.t('tema_automatico')),
+            (ThemeMode.light, t.t('tema_chiaro')),
+            (ThemeMode.dark, t.t('tema_scuro')),
+          ])
+            ChoiceChip(label: Text(testo), selected: modo == valore, onSelected: (_) => TemaApp.imposta(valore)),
+        ]),
+      ),
       const SizedBox(height: 36),
+      OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+        icon: const Icon(Icons.logout),
+        label: Text(t.t('esci')),
+        onPressed: _esci,
+      ),
+      const SizedBox(height: 12),
       OutlinedButton(
         style: OutlinedButton.styleFrom(
           foregroundColor: Stile.rosso,
@@ -542,7 +583,7 @@ class _SchermataRubricaState extends State<SchermataRubrica> {
             [c['societa_op'], c['contatto'], c['citta_op'], c['indirizzo_op']].any((v) => _testo(v).toLowerCase().contains(q)))
         .toList();
     return Scaffold(
-      appBar: AppBar(title: Text(t.t('rubrica'))),
+      appBar: barraApp(context, titolo: t.t('rubrica')),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Stile.verdePulsanti,
         foregroundColor: Colors.white,
@@ -570,7 +611,7 @@ class _SchermataRubricaState extends State<SchermataRubrica> {
                         child: ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                           itemCount: elenco.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFF444444)),
+                          separatorBuilder: (_, __) => Divider(height: 1, color: context.colori.bordo),
                           itemBuilder: (_, i) {
                             final c = elenco[i];
                             return ListTile(
@@ -718,13 +759,14 @@ class _SchermataContattoState extends State<SchermataContatto> {
   Widget build(BuildContext context) {
     final t = Testi.di(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.propria
+      appBar: barraApp(
+        context,
+        titolo: widget.propria
             ? t.t('la_mia_scheda')
             : widget.id == null
                 ? t.t('nuovo_contatto')
-                : t.t('contatto')),
-        actions: [
+                : t.t('contatto'),
+        azioni: [
           if (!widget.propria && widget.id != null)
             IconButton(tooltip: t.t('elimina'), icon: const Icon(Icons.delete_outline), onPressed: _elimina),
         ],
