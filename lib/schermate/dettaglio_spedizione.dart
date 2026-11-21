@@ -185,7 +185,8 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         ],
       ),
     );
-    campo.dispose();
+    // il campo si libera solo a finestra chiusa del tutto (durante l'animazione di uscita e' ancora in uso)
+    Future.delayed(const Duration(seconds: 1), campo.dispose);
     if (!mounted || email == null) return;
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       _avviso(t.t('email_non_valida'));

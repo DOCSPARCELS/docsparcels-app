@@ -7,6 +7,7 @@ import '../testi.dart';
 import 'entrata.dart';
 import 'le_mie_spedizioni.dart';
 import 'nuova_spedizione.dart';
+import 'pagamenti_fatture.dart';
 import 'preventivo.dart';
 
 /// Schermata «io»: nome, codice cliente, credito disponibile, uscita.
@@ -153,6 +154,17 @@ class SchermataProfiloState extends State<SchermataProfilo> {
                           label: Text(testi.t('le_mie_spedizioni')),
                           onPressed: () => Navigator.of(context)
                               .push(MaterialPageRoute(builder: (_) => const SchermataLeMieSpedizioni())),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.receipt_long_outlined),
+                          label: Text(testi.t('pagamenti_fatture')),
+                          onPressed: () async {
+                            await Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => const SchermataPagamentiFatture()));
+                            // credito e saldo possono essere cambiati
+                            if (mounted) _carica();
+                          },
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(

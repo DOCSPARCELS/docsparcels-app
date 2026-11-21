@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../servizi/api.dart';
 import '../stile.dart';
 import '../testi.dart';
+import '../widget/riquadro_bonifico.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
 import 'pagamento_carta.dart';
@@ -581,43 +582,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   }
 
   Future<void> _mostraBonifico(String numero, Map<String, dynamic> p) async {
-    final t = _t;
-    final banca = (p['banca'] as Map?)?.cast<String, dynamic>() ?? {};
-    final righe = <List<String>>[
-      [t.t('banca'), '${banca['nome'] ?? ''}'],
-      ['IBAN', '${banca['iban'] ?? ''}'],
-      ['BIC', '${banca['bic'] ?? ''}'],
-      [t.t('intestato_a'), '${banca['intestato_a'] ?? ''}'],
-      [t.t('importo'), _euro(p['importo'] as num?)],
-      [t.t('causale'), '${p['causale'] ?? ''}'],
-    ];
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
-        title: Text(t.t('spedizione_inviata').replaceAll('{n}', numero), textAlign: TextAlign.center),
-        content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(t.t('bonifico_testo'), textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            for (final r in righe)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: Text(r[0], style: const TextStyle(color: Stile.grigio, fontSize: 12)),
-                subtitle: Text(r[1], style: const TextStyle(color: Colors.white, fontSize: 14)),
-                trailing: IconButton(
-                  tooltip: t.t('copia'),
-                  icon: const Icon(Icons.copy, size: 18, color: Stile.verde),
-                  onPressed: () => Clipboard.setData(ClipboardData(text: r[1].replaceAll(' ', r[0] == 'IBAN' ? '' : ' '))),
-                ),
-              ),
-          ]),
-        ),
-        actions: [ElevatedButton(onPressed: () => Navigator.pop(c), child: Text(t.t('ok')))],
-      ),
-    );
+    await RiquadroBonifico.mostra(context, p, titolo: _t.t('spedizione_inviata').replaceAll('{n}', numero));
     if (mounted) Navigator.of(context).pop();
   }
 

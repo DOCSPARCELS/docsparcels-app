@@ -297,6 +297,42 @@ class Api {
     return r.bodyBytes;
   }
 
+  // ------------------------------------------------------------ pagamenti e fatture (nota 369)
+
+  /// {spedizioni: [{id, data, destinatario, dest_citta, servizio, importo, scadenza_link, pagamento}],
+  ///  fatture: {quante, totale, scadute}}
+  static Future<Map<String, dynamic>> pagamentiAperti() async =>
+      ((await _getCorpo('/cliente/api/pagamenti_aperti'))['data'] as Map<String, dynamic>?) ?? {};
+
+  /// stato: '' (tutte), 'da_pagare', 'pagate'. {fatture, pagina, pagine, totale_fatture}
+  static Future<Map<String, dynamic>> fatture({String stato = '', int pagina = 1, int perPagina = 25}) async {
+    final q = Uri(queryParameters: {'stato': stato, 'pagina': '$pagina', 'per_pagina': '$perPagina'}).query;
+    return ((await _getCorpo('/cliente/api/fatture?$q'))['data'] as Map<String, dynamic>?) ?? {};
+  }
+
+  /// Fattura con le righe.
+  static Future<Map<String, dynamic>> fattura(int id) async =>
+      ((await _getCorpo('/cliente/api/fatture/$id'))['data'] as Map<String, dynamic>?) ?? {};
+
+  /// Paga una o piu' fatture: metodo 'credito' | 'carta' | 'bonifico'.
+  /// Risposta: {metodo, importo, causale, url (carta), banca (bonifico)}.
+  static Future<Map<String, dynamic>> pagaFatture(List<int> ids, String metodo) async =>
+      _postCorpo('/cliente/api/paga_fatture', {'ids': ids, 'metodo': metodo}, tempo: const Duration(seconds: 60));
+
+  /// Paga una spedizione in attesa di pagamento: metodo 'carta' | 'bonifico'.
+  static Future<Map<String, dynamic>> pagaSpedizione(int id, String metodo) async =>
+      _postCorpo('/cliente/api/paga_spedizione/$id', {'metodo': metodo}, tempo: const Duration(seconds: 60));
+
+  /// Richiesta di ricarica del credito (minimo € 10): metodo 'carta' | 'bonifico'.
+  static Future<Map<String, dynamic>> richiediRicarica(double importo, String metodo) async =>
+      _postCorpo('/cliente/api/richiedi_ricarica', {'importo': importo, 'metodo': metodo},
+          tempo: const Duration(seconds: 60));
+
+  /// Soglia sotto la quale il gestionale avvisa che il credito sta finendo.
+  static Future<void> salvaSoglia(double soglia) async {
+    await _postCorpo('/cliente/api/soglia_credito', {'soglia': soglia});
+  }
+
   /// Indirizzo completo di una pagina del gestionale (pagamento myPOS).
   static String indirizzo(String percorsoOUrl) =>
       percorsoOUrl.startsWith('http') ? percorsoOUrl : '${Config.indirizzo}$percorsoOUrl';
