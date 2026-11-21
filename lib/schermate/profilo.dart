@@ -6,6 +6,7 @@ import '../stile.dart';
 import '../testi.dart';
 import 'entrata.dart';
 import 'le_mie_spedizioni.dart';
+import 'mio_profilo.dart';
 import 'nuova_spedizione.dart';
 import 'pagamenti_fatture.dart';
 import 'preventivo.dart';
@@ -137,8 +138,22 @@ class SchermataProfiloState extends State<SchermataProfilo> {
                     child: ListView(
                       padding: const EdgeInsets.all(24),
                       children: [
-                        Text('${testi.t('ciao')} ${_io?['nome_completo'] ?? ''}',
-                            style: Theme.of(context).textTheme.titleLarge),
+                        // Toccando il nome si apre il profilo completo (nota 372)
+                        InkWell(
+                          borderRadius: Stile.angoli,
+                          onTap: () async {
+                            await Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => const SchermataMioProfilo()));
+                            if (mounted) _carica();
+                          },
+                          child: Row(children: [
+                            Expanded(
+                              child: Text('${testi.t('ciao')} ${_io?['nome_completo'] ?? ''}',
+                                  style: Theme.of(context).textTheme.titleLarge),
+                            ),
+                            const Icon(Icons.chevron_right, color: Stile.grigio),
+                          ]),
+                        ),
                         const SizedBox(height: 24),
                         _riga(testi.t('codice_cliente'), '${_io?['codice'] ?? '-'}'),
                         const SizedBox(height: 12),

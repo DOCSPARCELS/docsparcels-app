@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'servizi/biometria.dart';
 import 'servizi/chiave.dart';
+import 'servizi/lingua.dart';
 import 'servizi/notifiche.dart';
 import 'schermate/entrata.dart';
 import 'schermate/profilo.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
   }
   // Con una chiave gia' salvata si apre il profilo (o prima lo sblocco con Face ID /
   // impronta, se scelto); se la chiave non vale piu', il profilo riporta all'entrata.
+  await LinguaApp.carica();
   final chiave = await ArchivioChiave.leggi();
   final conChiave = chiave != null && chiave.isNotEmpty;
   final conSblocco = conChiave && await Biometria.scelta() == 'si';
@@ -36,22 +38,27 @@ class AppDocsParcels extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "Doc's & Parcels",
-      debugShowCheckedModeBanner: false,
-      navigatorKey: Notifiche.navigatore,
-      theme: Stile.tema(),
-      supportedLocales: const [Locale('it'), Locale('en'), Locale('es'), Locale('fr'), Locale('de')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: conSblocco
-          ? const SchermataSblocco()
-          : conChiave
-              ? const SchermataProfilo()
-              : const SchermataEntrata(),
+    // La lingua scelta nel profilo (nota 372) cambia tutta l'app subito; senza scelta, quella del telefono
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: LinguaApp.scelta,
+      builder: (_, lingua, __) => MaterialApp(
+        title: "Doc's & Parcels",
+        debugShowCheckedModeBanner: false,
+        navigatorKey: Notifiche.navigatore,
+        theme: Stile.tema(),
+        locale: lingua,
+        supportedLocales: const [Locale('it'), Locale('en'), Locale('es'), Locale('fr'), Locale('de')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: conSblocco
+            ? const SchermataSblocco()
+            : conChiave
+                ? const SchermataProfilo()
+                : const SchermataEntrata(),
+      ),
     );
   }
 }

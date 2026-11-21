@@ -29,6 +29,8 @@ dependencies:
   open_filex: ^4.5.0
   # Etichetta al mittente con la condivisione del telefono (WhatsApp e altre app, nota 368 V3)
   share_plus: ^10.1.4
+  # Foto del profilo dalla galleria o dalla fotocamera (nota 372)
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

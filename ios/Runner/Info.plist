@@ -8,6 +8,10 @@
 	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Per entrare nell'app Doc's &amp; Parcels con Face ID invece della password.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Per scegliere la foto del tuo profilo in Doc's &amp; Parcels.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Per scattare la foto del tuo profilo in Doc's &amp; Parcels.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

@@ -333,6 +333,67 @@ class Api {
     await _postCorpo('/cliente/api/soglia_credito', {'soglia': soglia});
   }
 
+  // ------------------------------------------------------------ profilo (nota 372)
+
+  /// {nome, cognome, email, nome_utente, codice, registrato_il, ultimo_accesso, societa, foto}
+  static Future<Map<String, dynamic>> mioAccount() async =>
+      ((await _getCorpo('/cliente/api/mio_account'))['data'] as Map<String, dynamic>?) ?? {};
+
+  static Future<Map<String, dynamic>> salvaAccount(String nome, String cognome, String email) async =>
+      ((await _postCorpo('/profile/dati', {'nome': nome, 'cognome': cognome, 'email': email}))['data']
+          as Map<String, dynamic>?) ??
+      {};
+
+  static Future<void> cambiaPassword(String attuale, String nuova, String conferma) async {
+    await _postCorpo('/profile/password', {'attuale': attuale, 'nuova': nuova, 'conferma': conferma});
+  }
+
+  /// Foto del profilo (JPG, PNG o WebP, massimo 5 MB): il server la ritaglia quadrata.
+  static Future<String?> caricaFoto(List<int> byte, String nomeFile) async {
+    final richiesta = http.MultipartRequest('POST', _url('/profile/avatar'))
+      ..headers['X-App-Chiave'] = await ArchivioChiave.leggi() ?? ''
+      ..headers['Accept'] = 'application/json'
+      ..files.add(http.MultipartFile.fromBytes('immagine', byte, filename: nomeFile));
+    final r = await _manda(() async => http.Response.fromStream(await richiesta.send()),
+        tempo: const Duration(seconds: 60));
+    return (_risposta(r)['url'] as String?);
+  }
+
+  static Future<void> togliFoto() async {
+    _corpo(await _manda(() async => http.delete(_url('/profile/avatar'), headers: await _intestazioni())));
+  }
+
+  /// Intestazioni per leggere la foto del profilo (serve la chiave).
+  static Future<Map<String, String>> intestazioniImmagine() async =>
+      {'X-App-Chiave': await ArchivioChiave.leggi() ?? ''};
+
+  /// {id, modificabili: {...}, solo_lettura: {...}, condizioni: {...}}
+  static Future<Map<String, dynamic>> miaScheda() async =>
+      ((await _getCorpo('/cliente/api/mia_scheda'))['data'] as Map<String, dynamic>?) ?? {};
+
+  /// Salva campi di un contatto della rubrica o della propria scheda (solo quelli cambiati).
+  static Future<void> aggiornaContatto(int id, Map<String, dynamic> campi) async {
+    await _postCorpo('/cliente/api/contatti/$id/aggiorna', campi);
+  }
+
+  /// Nuovo contatto in rubrica: {contatto_id, codice}.
+  static Future<Map<String, dynamic>> nuovoContatto(Map<String, dynamic> campi) async =>
+      _postCorpo('/cliente/api/contatti/salva', campi);
+
+  static Future<void> eliminaContatto(int id) async {
+    await _postCorpo('/cliente/api/contatti/$id/elimina', {});
+  }
+
+  /// Lingua dei testi del server e delle notifiche (it, en, es, fr, de).
+  static Future<void> cambiaLingua(String lingua) async {
+    await _postCorpo('/app/api/lingua', {'lingua': lingua});
+  }
+
+  /// Elimina l'account (serve la password). L'account viene disattivato subito.
+  static Future<void> eliminaAccount(String password) async {
+    await _postCorpo('/app/api/elimina_account', {'password': password});
+  }
+
   /// Indirizzo completo di una pagina del gestionale (pagamento myPOS).
   static String indirizzo(String percorsoOUrl) =>
       percorsoOUrl.startsWith('http') ? percorsoOUrl : '${Config.indirizzo}$percorsoOUrl';
