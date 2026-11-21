@@ -9,6 +9,7 @@ import '../testi.dart';
 import 'dettaglio_spedizione.dart';
 import 'entrata.dart';
 import 'nuova_spedizione.dart';
+import 'pagamenti_fatture.dart';
 import 'profilo.dart';
 
 /// Le mie spedizioni (nota 368): le stesse righe e gli stessi filtri dell'elenco del sito.
@@ -20,6 +21,7 @@ class SchermataLeMieSpedizioni extends StatefulWidget {
 }
 
 const _filtri = ['', 'transito', 'consegnate', 'bozze'];
+const _arancio = Color(0xFFFF9800);
 
 class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> with SingleTickerProviderStateMixin {
   late final TabController _schede = TabController(length: _filtri.length, vsync: this);
@@ -35,6 +37,11 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
 
   /// Ogni nuova ricerca annulla le risposte di quelle prima
   int _giro = 0;
+
+  /// Nota 373 V5: nelle Bozze anche le spedizioni con una richiesta di pagamento aperta
+  List<Map<String, dynamic>> _daPagare = [];
+
+  bool get _bozze => _filtri[_schede.index] == 'bozze';
 
   @override
   void initState() {
@@ -63,8 +70,38 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
       _pagine = 1;
       _totale = 0;
       _errore = null;
+      _daPagare = [];
     });
+    if (_bozze) _caricaDaPagare(_giro);
     await _caricaAltre();
+  }
+
+  Future<void> _caricaDaPagare(int giro) async {
+    try {
+      final r = await Api.pagamentiAperti();
+      if (!mounted || giro != _giro) return;
+      final cerca = _cerca.text.trim().toLowerCase();
+      setState(() => _daPagare = ((r['spedizioni'] as List?) ?? [])
+          .cast<Map<String, dynamic>>()
+          .where((s) => cerca.isEmpty ||
+              ['id', 'destinatario', 'dest_citta'].any((k) => '${s[k] ?? ''}'.toLowerCase().contains(cerca)))
+          .map((s) => {
+                ...s,
+                'tipo': 'spedizione',
+                'mos': s['id'],
+                'totale': s['importo'],
+                'da_pagare': true,
+              })
+          .toList());
+    } on ErroreApi catch (_) {
+      // l'elenco delle bozze resta comunque
+    }
+  }
+
+  Future<void> _paga(Map<String, dynamic> s) async {
+    final metodi = (((s['pagamento'] as Map?)?['metodi'] as List?) ?? ['carta', 'bonifico']).cast<String>();
+    final cambiato = await pagaCon(context, metodi, (m) => Api.pagaSpedizione(s['id'] as int, m));
+    if (cambiato && mounted) _ricarica();
   }
 
   Future<void> _caricaAltre() async {
@@ -202,7 +239,8 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
         ),
       );
     }
-    if (_righe.isEmpty) {
+    final righe = [..._daPagare, ..._righe];
+    if (righe.isEmpty) {
       return _attesa
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -226,10 +264,10 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
         },
         child: ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          itemCount: _righe.length + 1,
+          itemCount: righe.length + 1,
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (_, i) {
-            if (i == _righe.length) {
+            if (i == righe.length) {
               return Padding(
                 padding: const EdgeInsets.all(12),
                 child: Center(
@@ -239,7 +277,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                 ),
               );
             }
-            return _riga(t, _righe[i]);
+            return _riga(t, righe[i]);
           },
         ),
       ),
@@ -281,12 +319,14 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
             const SizedBox(height: 6),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
-                  child: Text('${r['stato'] ?? ''}', style: TextStyle(color: colore, fontSize: 12)),
-                ),
-                const SizedBox(width: 8),
+                if (!_bozze) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
+                    child: Text('${r['stato'] ?? ''}', style: TextStyle(color: colore, fontSize: 12)),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(
                   child: Text(
                     [r['servizio'], r['awb']].where((v) => v != null && '$v'.trim().isNotEmpty).join(' · '),
@@ -295,8 +335,32 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                     style: const TextStyle(color: Stile.grigio, fontSize: 12),
                   ),
                 ),
+                if (_bozze) ...[
+                  const SizedBox(width: 8),
+                  Text(t.t('in_lavorazione'), style: const TextStyle(color: _arancio, fontSize: 12, fontWeight: FontWeight.w600)),
+                ],
               ],
             ),
+            if (r['da_pagare'] == true && r['pagamento'] != null) ...[
+              const SizedBox(height: 8),
+              Row(children: [
+                if (r['scadenza_link'] != null)
+                  Expanded(
+                    child: Text('${t.t('paga_entro')} ${Api.dataBreve('${r['scadenza_link']}')}',
+                        style: const TextStyle(color: _arancio, fontSize: 12)),
+                  )
+                else
+                  const Spacer(),
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(minimumSize: const Size(90, 36)),
+                    onPressed: () => _paga(r),
+                    child: Text(t.t('paga')),
+                  ),
+                ),
+              ]),
+            ],
           ],
         ),
       ),

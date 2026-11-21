@@ -52,6 +52,9 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
   int _tipologia = _tipologiaPacco;
   List<Map<String, dynamic>> _nazioni = [];
   List<Map<String, dynamic>>? _tariffe;
+
+  /// Nota 373 V5: dopo «Calcola» la pagina scorre da sola fino alle tariffe
+  final _chiaveTariffe = GlobalKey();
   Set<String> _mancanti = {};
   String? _errore;
   bool _attesa = false;
@@ -149,6 +152,15 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         _tariffe = tariffe;
         if (tariffe.isEmpty) _errore = testi.t('errore_nessuna_tariffa');
       });
+      if (tariffe.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final destinazione = _chiaveTariffe.currentContext;
+          if (destinazione != null) {
+            Scrollable.ensureVisible(destinazione,
+                duration: const Duration(milliseconds: 400), curve: Curves.easeOut, alignment: 0.05);
+          }
+        });
+      }
     } on ErroreApi catch (e) {
       await _gestisciErrore(e);
     } finally {
@@ -289,11 +301,19 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
     );
   }
 
+  /// Il colore del servizio come nel gestionale (campo colore della tabella servizi)
+  static Color _coloreServizio(dynamic esadecimale) {
+    final testo = '${esadecimale ?? ''}'.replaceAll('#', '').trim();
+    final valore = int.tryParse(testo, radix: 16);
+    if (testo.length != 6 || valore == null) return Stile.verde;
+    return Color(0xFF000000 | valore);
+  }
+
   Widget _tariffa(Testi testi, Map<String, dynamic> t) => Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          border: const Border(left: BorderSide(color: Stile.verde, width: 4)),
+          border: Border(left: BorderSide(color: _coloreServizio(t['colore']), width: 4)),
           color: context.colori.card,
           borderRadius: Stile.angoli,
         ),
@@ -323,9 +343,9 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusScope.of(context).unfocus(),
         child: SafeArea(
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-          children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _titolo(testi.t('partenza')),
             _luogo(testi, _partenza, 'p'),
             _titolo(testi.t('arrivo')),
@@ -340,7 +360,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
               showSelectedIcon: false,
               segments: [
                 ButtonSegment(value: _tipologiaDocumenti, label: Text(testi.t('documenti'))),
-                ButtonSegment(value: _tipologiaPacco, label: Text(testi.t('pacco'))),
+                ButtonSegment(value: _tipologiaPacco, label: Text(testi.t('merce'))),
               ],
               selected: {_tipologia},
               onSelectionChanged: (s) {
@@ -376,10 +396,10 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
               Text(_errore!, textAlign: TextAlign.center, style: const TextStyle(color: Stile.rosso)),
             ],
             if (_tariffe != null && _tariffe!.isNotEmpty) ...[
-              _titolo(testi.t('tariffe')),
+              KeyedSubtree(key: _chiaveTariffe, child: _titolo(testi.t('tariffe'))),
               for (final t in _tariffe!) _tariffa(testi, t),
             ],
-          ],
+          ]),
         ),
       ),
       ),

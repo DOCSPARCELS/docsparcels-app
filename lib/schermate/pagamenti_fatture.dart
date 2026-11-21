@@ -9,7 +9,6 @@ import '../stile.dart';
 import '../widget/barra.dart';
 import '../testi.dart';
 import '../widget/riquadro_bonifico.dart';
-import 'dettaglio_spedizione.dart';
 import 'entrata.dart';
 import 'pagamento_carta.dart';
 import 'profilo.dart';
@@ -111,10 +110,25 @@ String _statoFattura(Map<String, dynamic> f, Testi t) => f['nota_credito'] == tr
         : (f['scaduta'] == true ? t.t('fattura_scaduta') : t.t('fattura_da_pagare'));
 
 class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> with SingleTickerProviderStateMixin {
-  late final TabController _schede = TabController(length: 3, vsync: this);
-  final _chiaveDaPagare = GlobalKey<_DaPagareState>();
+  // Nota 373 V5: niente piu' scheda «Da pagare»; le spedizioni da pagare stanno nelle Bozze
+  late final TabController _schede = TabController(length: 2, vsync: this);
   final _chiaveFatture = GlobalKey<_FattureState>();
   final _chiaveCredito = GlobalKey<_CreditoState>();
+
+  /// Schede viste prima: la freccia indietro ci torna, dalla prima si esce
+  final List<int> _storia = [];
+  int _ultima = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _schede.addListener(() {
+      if (_schede.indexIsChanging || _schede.index == _ultima) return;
+      _storia.add(_ultima);
+      _ultima = _schede.index;
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
@@ -122,200 +136,45 @@ class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> w
     super.dispose();
   }
 
-  /// Dopo un pagamento tutte e tre le schede si rileggono
+  /// Dopo un pagamento le schede si rileggono
   void _rileggiTutto() {
-    _chiaveDaPagare.currentState?.carica();
     _chiaveFatture.currentState?.ricarica();
     _chiaveCredito.currentState?.carica();
   }
 
+  void _indietro() {
+    final precedente = _storia.removeLast();
+    _ultima = precedente;
+    _schede.animateTo(precedente);
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Testi.di(context);
-    return Scaffold(
-      appBar: barraApp(
-        context,
-        titolo: t.t('pagamenti_fatture'),
-        sotto: TabBar(
-          controller: _schede,
-          indicatorColor: Stile.verde,
-          labelColor: Stile.verde,
-          unselectedLabelColor: Stile.grigio,
-          tabs: [Tab(text: t.t('da_pagare')), Tab(text: t.t('fatture')), Tab(text: t.t('credito'))],
+    return PopScope(
+      canPop: _storia.isEmpty,
+      onPopInvokedWithResult: (uscito, _) {
+        if (!uscito && _storia.isNotEmpty) _indietro();
+      },
+      child: Scaffold(
+        appBar: barraApp(
+          context,
+          titolo: t.t('pagamenti_fatture'),
+          sotto: TabBar(
+            controller: _schede,
+            indicatorColor: Stile.verde,
+            labelColor: Stile.verde,
+            unselectedLabelColor: Stile.grigio,
+            tabs: [Tab(text: t.t('fatture')), Tab(text: t.t('credito'))],
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: TabBarView(controller: _schede, children: [
-          _DaPagare(key: _chiaveDaPagare, cambiato: _rileggiTutto),
-          _Fatture(key: _chiaveFatture, cambiato: _rileggiTutto),
-          _Credito(key: _chiaveCredito, cambiato: _rileggiTutto),
-        ]),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------- da pagare
-
-class _DaPagare extends StatefulWidget {
-  const _DaPagare({super.key, required this.cambiato});
-
-  final VoidCallback cambiato;
-
-  @override
-  State<_DaPagare> createState() => _DaPagareState();
-}
-
-class _DaPagareState extends State<_DaPagare> with AutomaticKeepAliveClientMixin {
-  List<Map<String, dynamic>> _spedizioni = [];
-  List<Map<String, dynamic>> _fatture = [];
-  final Set<int> _scelte = {};
-  Map<String, dynamic> _credito = {};
-  bool _attesa = true;
-  String? _errore;
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    carica();
-  }
-
-  Future<void> carica() async {
-    setState(() {
-      _attesa = true;
-      _errore = null;
-    });
-    try {
-      final r = await Future.wait([
-        Api.pagamentiAperti(),
-        Api.fatture(stato: 'da_pagare', perPagina: 100),
-        Api.credito().catchError((_) => <String, dynamic>{'attivo': false}),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _spedizioni = ((r[0]['spedizioni'] as List?) ?? []).cast<Map<String, dynamic>>();
-        _fatture = ((r[1]['fatture'] as List?) ?? [])
-            .cast<Map<String, dynamic>>()
-            .where((f) => f['nota_credito'] != true && ((f['da_pagare'] as num?) ?? 0) > 0)
-            .toList();
-        _scelte.removeWhere((id) => !_fatture.any((f) => f['id'] == id));
-        _credito = r[2];
-      });
-    } on ErroreApi catch (e) {
-      if (!mounted) return;
-      await _uscitaSeChiaveScaduta(context, e);
-      if (mounted) setState(() => _errore = e.messaggio ?? Testi.di(context).errore(e.codice));
-    } finally {
-      if (mounted) setState(() => _attesa = false);
-    }
-  }
-
-  double get _totaleScelte =>
-      _fatture.where((f) => _scelte.contains(f['id'])).fold(0.0, (s, f) => s + ((f['da_pagare'] as num?) ?? 0));
-
-  Future<void> _pagaFatture() async {
-    final totale = _totaleScelte;
-    final metodi = [
-      if (_credito['attivo'] == true && ((_credito['saldo'] as num?) ?? 0) >= totale) 'credito',
-      'carta',
-      'bonifico',
-    ];
-    final cambiato = await pagaCon(context, metodi, (m) => Api.pagaFatture(_scelte.toList(), m));
-    if (cambiato) widget.cambiato();
-  }
-
-  Future<void> _pagaSpedizione(Map<String, dynamic> s) async {
-    final metodi = (((s['pagamento'] as Map?)?['metodi'] as List?) ?? ['carta', 'bonifico']).cast<String>();
-    final cambiato = await pagaCon(context, metodi, (m) => Api.pagaSpedizione(s['id'] as int, m));
-    if (cambiato) widget.cambiato();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    final t = Testi.di(context);
-    if (_attesa && _spedizioni.isEmpty && _fatture.isEmpty) return const Center(child: CircularProgressIndicator());
-    if (_errore != null) return _Errore(testo: _errore!, riprova: carica);
-    return RefreshIndicator(
-      onRefresh: carica,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (_spedizioni.isEmpty && _fatture.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(t.t('niente_da_pagare'), textAlign: TextAlign.center, style: const TextStyle(color: Stile.grigio)),
-            ),
-          if (_spedizioni.isNotEmpty) ...[
-            _Titolo(t.t('spedizioni_da_pagare')),
-            for (final s in _spedizioni)
-              _Riquadro(
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => SchermataDettaglioSpedizione(id: s['id'] as int))),
-                child: Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('MOS ${s['id']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text([Api.nomeProprio('${s['destinatario'] ?? ''}'), Api.nomeProprio('${s['dest_citta'] ?? ''}')]
-                              .where((v) => v.isNotEmpty)
-                              .join(' · '),
-                          style: const TextStyle(color: Stile.grigio, fontSize: 13)),
-                      if (s['scadenza_link'] != null)
-                        Text('${t.t('paga_entro')} ${_data(s['scadenza_link'])}',
-                            style: const TextStyle(color: _arancio, fontSize: 12)),
-                    ]),
-                  ),
-                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    Text(_euro(s['importo'] as num?, t),
-                        style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    if (s['pagamento'] != null)
-                      SizedBox(
-                        height: 36,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(minimumSize: const Size(90, 36)),
-                          onPressed: () => _pagaSpedizione(s),
-                          child: Text(t.t('paga')),
-                        ),
-                      ),
-                  ]),
-                ]),
-              ),
-            const SizedBox(height: 16),
-          ],
-          if (_fatture.isNotEmpty) ...[
-            _Titolo(t.t('fatture_da_pagare')),
-            for (final f in _fatture)
-              _Riquadro(
-                onTap: () => setState(() => _scelte.contains(f['id']) ? _scelte.remove(f['id']) : _scelte.add(f['id'] as int)),
-                child: Row(children: [
-                  Checkbox(
-                    value: _scelte.contains(f['id']),
-                    activeColor: Stile.verde,
-                    onChanged: (v) => setState(() => v == true ? _scelte.add(f['id'] as int) : _scelte.remove(f['id'])),
-                  ),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${t.t('fattura')} ${f['numero']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text('${_data(f['data'])}${f['scadenza'] != null ? ' · ${t.t('scadenza')} ${_data(f['scadenza'])}' : ''}',
-                          style: TextStyle(color: f['scaduta'] == true ? Stile.rosso : Stile.grigio, fontSize: 12)),
-                    ]),
-                  ),
-                  Text(_euro(f['da_pagare'] as num?, t), style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
-                ]),
-              ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _scelte.isEmpty ? null : _pagaFatture,
-              child: Text(_scelte.isEmpty
-                  ? t.t('scegli_fatture')
-                  : '${t.t('paga')} ${_scelte.length} · ${_euro(_totaleScelte, t)}'),
-            ),
-          ],
-        ],
+        body: SafeArea(
+          child: TabBarView(controller: _schede, children: [
+            _Fatture(key: _chiaveFatture, cambiato: _rileggiTutto),
+            _Credito(key: _chiaveCredito, cambiato: _rileggiTutto),
+          ]),
+        ),
       ),
     );
   }
@@ -342,6 +201,10 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
   String? _errore;
   int _giro = 0;
 
+  /// Nota 373 V5: fatture scelte per pagarle insieme (prima nella scheda «Da pagare»)
+  final Set<int> _scelte = {};
+  Map<String, dynamic> _credito = {};
+
   @override
   bool get wantKeepAlive => true;
 
@@ -351,9 +214,33 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
     ricarica();
   }
 
+  static bool _pagabile(Map<String, dynamic> f) =>
+      f['nota_credito'] != true && f['stato'] != 'pagata' && ((f['da_pagare'] as num?) ?? 0) > 0;
+
+  double get _totaleScelte =>
+      _righe.where((f) => _scelte.contains(f['id'])).fold(0.0, (s, f) => s + ((f['da_pagare'] as num?) ?? 0));
+
+  void _scegli(Map<String, dynamic> f) =>
+      setState(() => _scelte.contains(f['id']) ? _scelte.remove(f['id']) : _scelte.add(f['id'] as int));
+
+  Future<void> _pagaScelte() async {
+    final totale = _totaleScelte;
+    final metodi = [
+      if (_credito['attivo'] == true && ((_credito['saldo'] as num?) ?? 0) >= totale) 'credito',
+      'carta',
+      'bonifico',
+    ];
+    final cambiato = await pagaCon(context, metodi, (m) => Api.pagaFatture(_scelte.toList(), m));
+    if (cambiato) widget.cambiato();
+  }
+
   Future<void> ricarica() async {
     _giro++;
+    Api.credito().then((c) {
+      if (mounted) _credito = c;
+    }).catchError((_) {});
     setState(() {
+      _scelte.clear();
       _righe.clear();
       _pagina = 0;
       _pagine = 1;
@@ -435,6 +322,12 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                               if (cambiato == true) widget.cambiato();
                             },
                             child: Row(children: [
+                              if (_pagabile(f))
+                                Checkbox(
+                                  value: _scelte.contains(f['id']),
+                                  activeColor: Stile.verde,
+                                  onChanged: (_) => _scegli(f),
+                                ),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Text('${t.t('fattura')} ${f['numero']}',
@@ -455,6 +348,14 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                     ),
                   ),
       ),
+      if (_scelte.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: ElevatedButton(
+            onPressed: _pagaScelte,
+            child: Text('${t.t('paga')} ${_scelte.length} · ${_euro(_totaleScelte, t)}'),
+          ),
+        ),
     ]);
   }
 }
