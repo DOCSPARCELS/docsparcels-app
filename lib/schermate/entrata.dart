@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../servizi/api.dart';
 import '../servizi/biometria.dart';
 import '../servizi/lingua.dart';
+import '../servizi/tema.dart';
 import '../stile.dart';
 import '../testi.dart';
 import '../widget/barra.dart';
@@ -88,10 +90,54 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
     await Biometria.salvaScelta(usa);
   }
 
+  static const _bandiere = {'it': '🇮🇹', 'en': '🇬🇧', 'es': '🇪🇸', 'fr': '🇫🇷', 'de': '🇩🇪'};
+
+  static const _email = 'info@docsparcels.com';
+  static const _telefono = '+39 06 7720 3074';
+
+  Future<void> _apri(Uri indirizzo) async {
+    try {
+      if (await launchUrl(indirizzo)) return;
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(Testi.di(context).t('non_apribile'), textAlign: TextAlign.center)));
+    }
+  }
+
+  /// Piè di pagina (nota 373 V4): marchio, email e telefono che si toccano
+  Widget _piede(Testi testi) {
+    final colore = context.temaScuro ? const Color(0xFFBDBDBD) : const Color(0xFF555555);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text("Doc's & Parcels®", style: TextStyle(fontWeight: FontWeight.w600, color: colore)),
+          const SizedBox(height: 2),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: colore, padding: const EdgeInsets.symmetric(horizontal: 6)),
+              onPressed: () => _apri(Uri(scheme: 'mailto', path: _email)),
+              child: const Text(_email, style: TextStyle(fontSize: 13)),
+            ),
+            Text('·', style: TextStyle(color: colore.withValues(alpha: 0.35))),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: colore, padding: const EdgeInsets.symmetric(horizontal: 6)),
+              onPressed: () => _apri(Uri(scheme: 'tel', path: _telefono.replaceAll(' ', ''))),
+              child: const Text(_telefono, style: TextStyle(fontSize: 13)),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final testi = Testi.di(context);
     return Scaffold(
+      bottomNavigationBar: _piede(testi),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -105,7 +151,7 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   // Nota 373 V3: logo centrato in alto, poi il saluto
                   const Center(child: LogoApp(altezza: 72)),
                   const SizedBox(height: 36),
-                  Text(testi.t('bentornato'),
+                  Text(testi.t('ciao_accesso'),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: context.colori.testo)),
                   const SizedBox(height: 6),
@@ -145,19 +191,42 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(testi.t('entra')),
                   ),
-                  const SizedBox(height: 40),
-                  // Lingua dell'app, anche prima di entrare
-                  Wrap(alignment: WrapAlignment.center, spacing: 4, children: [
+                  const SizedBox(height: 32),
+                  // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: TemaApp.scelta,
+                    builder: (_, modo, __) => Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
+                      for (final (valore, icona, testo) in [
+                        (ThemeMode.system, Icons.brightness_auto_outlined, testi.t('tema_automatico')),
+                        (ThemeMode.light, Icons.light_mode_outlined, testi.t('tema_chiaro')),
+                        (ThemeMode.dark, Icons.dark_mode_outlined, testi.t('tema_scuro')),
+                      ])
+                        ChoiceChip(
+                          avatar: Icon(icona, size: 18, color: modo == valore ? Stile.verde : Stile.grigio),
+                          showCheckmark: false,
+                          label: Text(testo),
+                          selected: modo == valore,
+                          onSelected: (_) => TemaApp.imposta(valore),
+                        ),
+                    ]),
+                  ),
+                  const SizedBox(height: 20),
+                  // Lingua dell'app, anche prima di entrare: nome e sotto la bandierina
+                  Wrap(alignment: WrapAlignment.center, spacing: 2, children: [
                     for (final l in Testi.lingue)
                       TextButton(
                         style: TextButton.styleFrom(
                           foregroundColor: testi.lingua == l ? Stile.verde : Stile.grigio,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                           minimumSize: const Size(0, 36),
                         ),
                         onPressed: () => LinguaApp.imposta(l),
-                        child: Text(testi.t('lingua_$l'),
-                            style: TextStyle(fontWeight: testi.lingua == l ? FontWeight.w700 : FontWeight.w500)),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Text(testi.t('lingua_$l'),
+                              style: TextStyle(fontWeight: testi.lingua == l ? FontWeight.w700 : FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          Text(_bandiere[l] ?? '', style: const TextStyle(fontSize: 20)),
+                        ]),
                       ),
                   ]),
                 ],

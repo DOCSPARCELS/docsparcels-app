@@ -145,7 +145,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     final c = context.colori;
     final nome = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).first;
     final voci = [
-      (Icons.add, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget, true),
+      (Icons.public, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget, false),
       (Icons.calculate_outlined, t.t('preventivo_veloce'), const SchermataPreventivo() as Widget, false),
       (Icons.list_alt_outlined, t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget, false),
       (Icons.receipt_long_outlined, t.t('pagamenti_fatture'), const SchermataPagamentiFatture() as Widget, false),

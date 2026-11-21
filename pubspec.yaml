@@ -29,6 +29,7 @@ dependencies:
   share_plus: ^10.1.4
   # Foto del profilo dalla galleria o dalla fotocamera (nota 372)
   image_picker: ^1.1.2
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

@@ -805,7 +805,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         showSelectedIcon: false,
         segments: [
           ButtonSegment(value: true, label: Text(t.t('documenti'))),
-          ButtonSegment(value: false, label: Text(t.t('pacco'))),
+          ButtonSegment(value: false, label: Text(t.t('merce'))),
         ],
         selected: {_documenti},
         onSelectionChanged: (s) => setState(() {
