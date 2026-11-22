@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:docsparcels_app/main.dart';
 import 'package:docsparcels_app/schermate/profilo.dart';
+import 'package:docsparcels_app/servizi/api.dart';
 import 'package:docsparcels_app/testi.dart';
 import 'package:docsparcels_app/widget/barra.dart';
 
@@ -20,6 +21,25 @@ void main() {
     await tester.pump();
     // Nota 373 V3: al posto della scritta c'e' il logo
     expect(find.byType(LogoApp), findsOneWidget);
+  });
+
+  test('numero della fattura senza anno', () {
+    expect(Api.numeroFattura('399/2026'), '399');
+    expect(Api.numeroFattura('NC 20/2026'), 'NC 20');
+    expect(Api.numeroFattura('399'), '399');
+    expect(Api.numeroFattura(null), '');
+  });
+
+  test("dogana solo fuori dall'Unione Europea", () {
+    const ue = {'IT', 'DE', 'ES'};
+    const territori = {'ES': {'35': 'IC', '38': 'IC', '51': 'ES-CE', '52': 'ES-ML'}};
+    expect(Api.fuoriUe('IT', '00185', ue, territori), false);
+    expect(Api.fuoriUe('de', '35037', ue, territori), false);
+    expect(Api.fuoriUe('ES', '28001', ue, territori), false);
+    expect(Api.fuoriUe('ES', '35001', ue, territori), true);
+    expect(Api.fuoriUe('ES', '52001', ue, territori), true);
+    expect(Api.fuoriUe('US', '50011', ue, territori), true);
+    expect(Api.fuoriUe('', '', ue, territori), false);
   });
 
   test('credito con il separatore delle migliaia', () {

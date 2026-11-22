@@ -65,13 +65,17 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       } on ErroreApi catch (e) {
         if (e.codice == 'chiave_non_valida') rethrow;
       }
-      var fattureTotali = 0;
-      var daPagare = 0;
-      var totaleDaPagare = 0.0;
+      // Nota 373 V22: le due letture sono separate, una che non riesce non fa sparire la card Fatture
+      var fattureTotali = _fattureTotali;
+      var daPagare = _fattureDaPagare;
+      var totaleDaPagare = _totaleDaPagare;
       try {
-        final r = await Future.wait([Api.fatture(perPagina: 1), Api.pagamentiAperti()]);
-        fattureTotali = (r[0]['totale_fatture'] as num?)?.toInt() ?? 0;
-        final f = (r[1]['fatture'] as Map?) ?? {};
+        fattureTotali = ((await Api.fatture(perPagina: 1))['totale_fatture'] as num?)?.toInt() ?? 0;
+      } on ErroreApi catch (e) {
+        if (e.codice == 'chiave_non_valida') rethrow;
+      }
+      try {
+        final f = ((await Api.pagamentiAperti())['fatture'] as Map?) ?? {};
         daPagare = (f['quante'] as num?)?.toInt() ?? 0;
         totaleDaPagare = (f['totale'] as num?)?.toDouble() ?? 0;
       } on ErroreApi catch (e) {
@@ -118,9 +122,12 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     if (mounted) _carica();
   }
 
+  /// Regola di Luca (nota 373 V22): chi ha almeno una fattura, anche pagata, le vede tutte
+  bool get _haFatture => _fattureTotali > 0 || _fattureDaPagare > 0;
+
   /// Nota 373 V18: la sezione mostra solo le schede che il cliente ha (fatture, credito)
   Widget _sezionePagamenti({int scheda = 0}) => SchermataPagamentiFatture(
-      scheda: scheda, conFatture: _fattureTotali > 0, conCredito: _credito?['attivo'] == true);
+      scheda: scheda, conFatture: _haFatture, conCredito: _credito?['attivo'] == true);
 
   String get _iniziali {
     final parole = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
@@ -232,15 +239,24 @@ class SchermataProfiloState extends State<SchermataProfilo> {
           ]),
         ),
       ],
-      // Nota 373 V18: solo se ci sono fatture da pagare; apre le Fatture
-      if (_fattureDaPagare > 0) ...[
+      // Nota 373 V22: sempre, se il cliente ha fatture; con quante e quanto se ce ne sono da pagare
+      if (_haFatture) ...[
         const SizedBox(height: 12),
         CardApp(
           onTap: () => _apri(_sezionePagamenti()),
           child: Row(children: [
-            Expanded(child: Text('${t.t('fatture_da_pagare')} ($_fattureDaPagare)', style: TextStyle(color: Stile.grigio))),
-            Text(euro(_totaleDaPagare, t.lingua),
-                style: const TextStyle(color: Stile.rosso, fontSize: 22, fontWeight: FontWeight.w700)),
+            Expanded(
+              child: Text(
+                  _fattureDaPagare > 0
+                      ? '${t.t('fatture')} · $_fattureDaPagare ${t.t('da_pagare').toLowerCase()}'
+                      : t.t('fatture'),
+                  style: TextStyle(color: Stile.grigio)),
+            ),
+            if (_fattureDaPagare > 0)
+              Text(euro(_totaleDaPagare, t.lingua),
+                  style: const TextStyle(color: Stile.rosso, fontSize: 22, fontWeight: FontWeight.w700))
+            else
+              Icon(Icons.chevron_right, color: Stile.grigio),
           ]),
         ),
       ],

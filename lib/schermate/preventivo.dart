@@ -303,7 +303,8 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         builder: (_) => SchermataNuovaSpedizione(daPreventivo: {
               'mitt': lato(_partenza),
               'dest': lato(_arrivo),
-              'documenti': _tipologia == _tipologiaDocumenti,
+              // Nota 373 V22: la tipologia con cui e' stato calcolato il prezzo (documenti oltre 2,5 kg = merce)
+              'documenti': _tipologiaDaUsare == _tipologiaDocumenti,
               'colli': [
                 for (final c in _colli)
                   {

@@ -108,6 +108,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   Map<String, dynamic> _dati = {};
   List<Map<String, dynamic>> _nazioni = [];
   Set<String> _ue = {};
+  Map<String, dynamic> _territori = {};
   List<Map<String, dynamic>>? _rubrica;
 
   final _mitt = _Sezione();
@@ -170,7 +171,9 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       if (!mounted) return;
       _dati = risultati[0] as Map<String, dynamic>;
       _nazioni = risultati[1] as List<Map<String, dynamic>>;
-      _ue = risultati[2] as Set<String>;
+      final ue = risultati[2] as ({Set<String> codici, Map<String, dynamic> territori});
+      _ue = ue.codici;
+      _territori = ue.territori;
       final m = (_dati['mittente'] as Map?)?.cast<String, dynamic>() ?? {};
       _mitt.compila(m, _nazione('${m['codice_nazione'] ?? ''}'));
       _mitt.codiceRubrica = '${_dati['codice_cliente'] ?? ''}';
@@ -365,10 +368,9 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
     return '${iso.substring(8, 10)}.${iso.substring(5, 7)}.${iso.substring(2, 4)}';
   }
 
-  bool get _fuoriUe {
-    final codice = '${_dest.nazione?['codice'] ?? ''}'.toUpperCase();
-    return codice.isNotEmpty && _ue.isNotEmpty && !_ue.contains(codice) && !_documenti;
-  }
+  /// Dogana: solo merce con destinazione fuori UE (nota 373 V22: Canarie, Ceuta e Melilla dal CAP)
+  bool get _fuoriUe =>
+      !_documenti && Api.fuoriUe('${_dest.nazione?['codice'] ?? ''}', _dest.cap.text, _ue, _territori);
 
   Map<String, dynamic> _sezionePerServer(String pre, _Sezione s) => {
         '${pre}_societa': s.societa.text.trim(),

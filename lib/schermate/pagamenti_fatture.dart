@@ -374,7 +374,7 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                                 ),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text('${t.t('fattura')} ${f['numero']}',
+                                  Text('${t.t('fattura')} ${Api.numeroFattura(f['numero'])}',
                                       style: const TextStyle(fontWeight: FontWeight.w600)),
                                   Text(
                                       '${_data(f['data'])}${f['scadenza'] != null && f['stato'] != 'pagata' ? ' · ${t.t('scadenza')} ${_data(f['scadenza'])}' : ''}',
@@ -502,7 +502,7 @@ class _SchermataFatturaState extends State<SchermataFattura> {
         if (!fatto) Navigator.of(context).pop(_cambiato);
       },
       child: Scaffold(
-        appBar: barraApp(context, titolo: f == null ? t.t('fattura') : '${t.t('fattura')} ${f['numero']}'),
+        appBar: barraApp(context, titolo: f == null ? t.t('fattura') : '${t.t('fattura')} ${Api.numeroFattura(f['numero'])}'),
         body: SafeArea(
           child: _attesa && f == null
               ? const Center(child: CircularProgressIndicator())

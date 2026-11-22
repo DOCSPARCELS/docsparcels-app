@@ -108,11 +108,32 @@ class Api {
     return ((corpo['data'] as List?) ?? []).cast<Map<String, dynamic>>();
   }
 
-  /// GET /api/nazioni/ue: codici delle nazioni UE (fuori UE con un pacco serve la dogana).
-  static Future<Set<String>> nazioniUe() async {
+  /// GET /api/nazioni/ue: codici delle nazioni UE (fuori UE con un pacco serve la dogana) e territori
+  /// che si riconoscono dal CAP ({'ES': {'35': 'IC'}}: le Canarie sono fuori UE, nota 373 V22).
+  static Future<({Set<String> codici, Map<String, dynamic> territori})> nazioniUe() async {
     final corpo = _corpo(await _manda(() async => http.get(_url('/api/nazioni/ue'), headers: await _intestazioni())));
-    return (((corpo['data'] as Map?)?['codici'] as List?) ?? []).map((c) => '$c'.toUpperCase()).toSet();
+    final dati = (corpo['data'] as Map?) ?? {};
+    return (
+      codici: ((dati['codici'] as List?) ?? []).map((c) => '$c'.toUpperCase()).toSet(),
+      territori: ((dati['territori_da_cap'] as Map?) ?? {}).cast<String, dynamic>(),
+    );
   }
+
+  /// true se la destinazione e' fuori dall'UE, con la regola del gestionale (nazioni_service.codice_fiscale):
+  /// nazione fuori elenco, oppure territorio fuori UE indicato dal CAP.
+  static bool fuoriUe(String nazione, String cap, Set<String> codici, Map<String, dynamic> territori) {
+    var codice = nazione.trim().toUpperCase();
+    if (codice.isEmpty || codici.isEmpty) return false;
+    final prefissi = territori[codice];
+    final cifre = cap.replaceAll(RegExp(r'\D'), '');
+    if (prefissi is Map && cifre.length == 5 && prefissi[cifre.substring(0, 2)] != null) {
+      codice = '${prefissi[cifre.substring(0, 2)]}';
+    }
+    return !codici.contains(codice);
+  }
+
+  /// Nota 373 V22: a video il numero della fattura e' senza anno (399/2026 -> 399). Il numero vero non cambia.
+  static String numeroFattura(dynamic numero) => '${numero ?? ''}'.replaceFirst(RegExp(r'/\d{4}$'), '');
 
   /// POST /cliente/api/calcola: le tariffe che il cliente vede nell'area cliente, gia' in ordine
   /// dalla piu' economica. Il calcolo lo fa tutto il server (listini, sconti, carburante, IVA).
