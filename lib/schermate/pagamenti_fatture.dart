@@ -495,11 +495,9 @@ class _SchermataFatturaState extends State<SchermataFattura> {
                   ? _Errore(testo: _errore!, riprova: _carica)
                   : ListView(padding: const EdgeInsets.all(16), children: [
                       Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(border: Border.all(color: _coloreFattura(f!)), borderRadius: Stile.angoli),
-                          child: Text(_statoFattura(f, t), style: TextStyle(color: _coloreFattura(f))),
-                        ),
+                        // nota 373 V13: solo la scritta, senza riquadro
+                        Text(_statoFattura(f!, t),
+                            style: TextStyle(color: _coloreFattura(f), fontWeight: FontWeight.w600)),
                         const Spacer(),
                         Text(_euro(f['totale'] as num?, t),
                             style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
@@ -526,13 +524,17 @@ class _SchermataFatturaState extends State<SchermataFattura> {
                           ]),
                         ),
                       const SizedBox(height: 20),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                        icon: _pdf
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.picture_as_pdf_outlined),
-                        label: Text(t.t('apri_pdf')),
-                        onPressed: _pdf ? null : _apriPdf,
+                      // nota 373 V13: scritta senza bordo con l'icona del PDF rosso Adobe
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(foregroundColor: context.colori.testo),
+                          icon: _pdf
+                              ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.picture_as_pdf, size: 30, color: Color(0xFFFA0F00)),
+                          label: Text(t.t('apri_pdf'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          onPressed: _pdf ? null : _apriPdf,
+                        ),
                       ),
                       if (f['pagamento'] != null) ...[
                         const SizedBox(height: 12),

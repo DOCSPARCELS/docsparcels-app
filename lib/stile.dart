@@ -69,9 +69,13 @@ class Stile {
             color: s.contains(WidgetState.selected) ? verde : grigio)),
       ),
       dividerColor: c.bordo,
+      // Nota 373 V13: campi senza riquadro, con un fondo grigio leggerissimo; il verde solo mentre si scrive.
+      // I campi mancanti restano col bordo rosso (lo mettono le schermate).
       inputDecorationTheme: InputDecorationTheme(
-        border: const OutlineInputBorder(borderRadius: angoli),
-        enabledBorder: OutlineInputBorder(borderRadius: angoli, borderSide: BorderSide(color: c.bordoCampi)),
+        filled: true,
+        fillColor: c.fondoCampi,
+        border: const OutlineInputBorder(borderRadius: angoli, borderSide: BorderSide.none),
+        enabledBorder: const OutlineInputBorder(borderRadius: angoli, borderSide: BorderSide.none),
         focusedBorder: const OutlineInputBorder(borderRadius: angoli, borderSide: BorderSide(color: verde)),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -107,6 +111,7 @@ class Colori {
     required this.barra,
     required this.testo,
     required this.cerchioIcona,
+    required this.fondoCampi,
   });
 
   final Color fondo;
@@ -119,6 +124,9 @@ class Colori {
   /// Fondo dei cerchi delle icone nelle card (quello della voce principale e' verdePulsanti)
   final Color cerchioIcona;
 
+  /// Fondo dei campi (nota 373 V13): appena diverso dallo sfondo, al posto del riquadro
+  final Color fondoCampi;
+
   static const scuro = Colori(
     fondo: Color(0xFF1E1E1E),
     card: Color(0xFF2A2A2A),
@@ -127,6 +135,7 @@ class Colori {
     barra: Color(0xFF141418),
     testo: Colors.white,
     cerchioIcona: Color(0xFF23462D),
+    fondoCampi: Color(0xFF343434),
   );
 
   static const chiaro = Colori(
@@ -137,6 +146,7 @@ class Colori {
     barra: Colors.white,
     testo: Color(0xFF1E1E1E),
     cerchioIcona: Color(0xFFDCEFE0),
+    fondoCampi: Color(0xFFE9EBEE),
   );
 }
 

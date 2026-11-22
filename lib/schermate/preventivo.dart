@@ -270,7 +270,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
           if (rubrica != null)
             IconButton(
               tooltip: Testi.di(context).t('scegli_da_rubrica'),
-              icon: const Icon(Icons.contacts_outlined, color: Stile.verde),
+              icon: const Icon(Icons.people, color: Stile.verde),
               onPressed: rubrica,
             ),
         ]),

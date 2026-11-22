@@ -298,9 +298,50 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     final totale = s['totale'] as num?;
     final colli = ((s['colli'] as List?) ?? []).whereType<Map>().toList();
     final peso = s['peso_tassato'] as num?;
+    final etichetta = _documenti.where((d) => d['tipo'] == 'awb').firstOrNull;
+    final invia = s['invia_etichetta_mittente'] == true;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Nota 373 V13: i pulsanti sopra il costo, come nel gestionale: «Invia» viola, «Etichetta» bianco
+        if (!widget.vecchia && (invia || etichetta != null)) ...[
+          Row(children: [
+            if (invia)
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6A1B9A),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  icon: _scaricando == 'etichetta'
+                      ? const SizedBox(
+                          width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.send, size: 18),
+                  label: Text(t.t('invia')),
+                  onPressed: _scaricando == null ? _inviaEtichetta : null,
+                ),
+              ),
+            if (invia && etichetta != null) const SizedBox(width: 10),
+            if (etichetta != null)
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF1E1E1E),
+                    side: const BorderSide(color: Color(0xFFDDDDDD)),
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  icon: _scaricando == etichetta['url']
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFFFA0F00)),
+                  label: Text(t.t('doc_etichetta_breve')),
+                  onPressed: _scaricando == null ? () => _apriDocumento(etichetta) : null,
+                ),
+              ),
+          ]),
+          const SizedBox(height: 14),
+        ],
         // Nota 373 V8: niente stato qui (c'e' il tracciamento sotto); importo a destra con la sua scritta
         if (totale != null)
           Row(
@@ -368,17 +409,6 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
                 onPressed: () => _apriDocumento(d),
               ),
             ),
-          if (s['invia_etichetta_mittente'] == true) ...[
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: _scaricando == 'etichetta'
-                  ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.send_outlined),
-              label: Text(t.t('invia_etichetta')),
-              onPressed: _scaricando == null ? _inviaEtichetta : null,
-            ),
-          ],
         ],
       ],
     );
