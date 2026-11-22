@@ -4,7 +4,8 @@ import '../servizi/tema.dart';
 import '../stile.dart';
 import '../testi.dart';
 
-/// Scelta del tema (nota 373 V6): Chiaro, Scuro, Automatico, tre pulsanti della stessa larghezza.
+/// Scelta del tema: Chiaro, Scuro, Automatico, tre pulsanti della stessa larghezza (nota 373 V6).
+/// Nota 373 V10: neutri come nel gestionale, niente verde; icone sole, luna e cerchio meta' e meta'.
 /// La stessa in «Il mio profilo» → «Aspetto» e nella schermata di accesso.
 class SceltaTema extends StatelessWidget {
   const SceltaTema({super.key});
@@ -12,26 +13,43 @@ class SceltaTema extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Testi.di(context);
+    final c = context.colori;
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: TemaApp.scelta,
-      builder: (_, modo, __) => SizedBox(
-        width: double.infinity,
-        child: SegmentedButton<ThemeMode>(
-          style: SegmentedButton.styleFrom(
-            selectedBackgroundColor: Stile.verdePulsanti,
-            selectedForegroundColor: Colors.white,
-            shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+      builder: (_, modo, __) => Row(children: [
+        for (final (i, (valore, icona, testo)) in [
+          (ThemeMode.light, Icons.light_mode_outlined, t.t('tema_chiaro')),
+          (ThemeMode.dark, Icons.dark_mode_outlined, t.t('tema_scuro')),
+          (ThemeMode.system, Icons.contrast, t.t('tema_automatico')),
+        ].indexed) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: c.testo,
+                backgroundColor: modo == valore ? Stile.grigio.withValues(alpha: 0.22) : Colors.transparent,
+                side: BorderSide(color: modo == valore ? Stile.grigio : c.bordoCampi),
+                shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                minimumSize: const Size(0, 44),
+              ),
+              onPressed: () => TemaApp.imposta(valore),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                Icon(icona, size: 18),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(testo,
+                        maxLines: 1,
+                        style: TextStyle(fontWeight: modo == valore ? FontWeight.w700 : FontWeight.w500)),
+                  ),
+                ),
+              ]),
+            ),
           ),
-          showSelectedIcon: false,
-          segments: [
-            ButtonSegment(value: ThemeMode.light, label: Text(t.t('tema_chiaro'))),
-            ButtonSegment(value: ThemeMode.dark, label: Text(t.t('tema_scuro'))),
-            ButtonSegment(value: ThemeMode.system, label: Text(t.t('tema_automatico'))),
-          ],
-          selected: {modo},
-          onSelectionChanged: (s) => TemaApp.imposta(s.first),
-        ),
-      ),
+        ],
+      ]),
     );
   }
 }

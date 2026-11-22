@@ -200,7 +200,8 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                       Expanded(
                         child: TextButton(
                           style: TextButton.styleFrom(
-                            foregroundColor: testi.lingua == l ? Stile.verde : Stile.grigio,
+                            // nota 373 V10: verde solo il pulsante Entra; la lingua scelta e' in grassetto
+                            foregroundColor: testi.lingua == l ? context.colori.testo : Stile.grigio,
                             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
                             minimumSize: const Size(0, 36),
                           ),

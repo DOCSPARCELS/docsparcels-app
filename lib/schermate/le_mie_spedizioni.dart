@@ -300,6 +300,37 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
     );
   }
 
+  /// MOS a gruppi: 5557171 -> 555 7171
+  static String _mos(dynamic v) {
+    final s = '$v';
+    return s.length == 7 ? '${s.substring(0, 3)} ${s.substring(3)}' : s;
+  }
+
+  /// Mittente o destinatario: nome in grassetto, sotto CAP, citta' e nazione (come la card della home)
+  Widget _lato(String etichetta, dynamic nome, dynamic cap, dynamic citta, dynamic nazione) {
+    String pulito(dynamic v) => Api.nomeProprio(v == null ? '' : '$v'.trim());
+    final chi = pulito(nome);
+    final luogo = [cap == null ? '' : '$cap'.trim(), pulito(citta)].where((v) => v.isNotEmpty).join(' ');
+    final dove = [luogo, pulito(nazione)].where((v) => v.isNotEmpty).join(' · ');
+    if (chi.isEmpty && dove.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 100, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (chi.isNotEmpty)
+              Text(chi,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colori.testo)),
+            if (dove.isNotEmpty) Text(dove, style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
   /// Bozze, richieste e spedizioni da pagare: «In lavorazione» in arancio a destra (nota 373 V5)
   static bool _inLavorazione(Map<String, dynamic> r) =>
       r['da_pagare'] == true || const {'bozza', 'da_completare', 'richiesta'}.contains('${r['tipo']}');
@@ -307,10 +338,6 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
   Widget _riga(Testi t, Map<String, dynamic> r) {
     final lavorazione = _inLavorazione(r);
     final colore = _colore(r['colore'] as String?);
-    final destinatario = Api.nomeProprio('${r['destinatario'] ?? ''}'.trim());
-    final arrivo = [Api.nomeProprio('${r['dest_citta'] ?? ''}'.trim()), '${r['dest_codice_nazione'] ?? ''}'.trim()]
-        .where((v) => v.isNotEmpty)
-        .join(' · ');
     final totale = r['totale'] as num?;
     return InkWell(
       borderRadius: Stile.angoli,
@@ -322,22 +349,29 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Nota 373 V10: come la card «Ultima spedizione»: MOS e data in evidenza, poi mittente e
+            // destinatario con nome, CAP, citta' e nazione
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('MOS ${r['mos'] ?? r['id']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
-                Text('${r['data'] ?? ''}', style: const TextStyle(color: Stile.grigio, fontSize: 13)),
-                const Spacer(),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('MOS ${_mos(r['mos'] ?? r['id'])}',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: context.colori.testo)),
+                    if ('${r['data'] ?? ''}'.isNotEmpty)
+                      Text('${r['data']}', style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+                  ]),
+                ),
                 if (totale != null)
                   Text(SchermataProfiloState.euro(totale, t.lingua),
-                      style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
               ],
             ),
-            const SizedBox(height: 6),
-            if (destinatario.isNotEmpty) Text(destinatario, maxLines: 1, overflow: TextOverflow.ellipsis),
-            if (arrivo.isNotEmpty)
-              Text(arrivo, style: const TextStyle(color: Stile.grigio, fontSize: 13)),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
+            _lato(t.t('mittente'), r['mittente'], r['mitt_cap'], r['mitt_citta'], r['mitt_nazione'] ?? r['mitt_codice_nazione']),
+            _lato(t.t('destinatario'), r['destinatario'], r['dest_cap'], r['dest_citta'],
+                r['dest_nazione'] ?? r['dest_codice_nazione']),
+            const SizedBox(height: 4),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
