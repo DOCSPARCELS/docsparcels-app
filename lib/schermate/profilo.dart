@@ -5,6 +5,7 @@ import '../servizi/notifiche.dart';
 import '../stile.dart';
 import '../testi.dart';
 import '../widget/barra.dart';
+import '../widget/icona_ritiro.dart';
 import 'dettaglio_spedizione.dart';
 import 'entrata.dart';
 import 'le_mie_spedizioni.dart';
@@ -172,10 +173,10 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     final nome = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).first;
     // Nota 373 V18: in basso a sinistra «Prenota ritiro», a destra «Le mie spedizioni»
     final voci = [
-      (Icons.public, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget),
-      (Icons.calculate_outlined, t.t('preventivo_veloce'), const SchermataPreventivo() as Widget),
-      (Icons.trolley, t.t('prenota_ritiro'), const SchermataPrenotaRitiro() as Widget),
-      (Icons.list_alt_outlined, t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget),
+      (const Icon(Icons.public) as Widget, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget),
+      (const Icon(Icons.calculate_outlined) as Widget, t.t('preventivo_veloce'), const SchermataPreventivo() as Widget),
+      (const IconaRitiro(size: 34) as Widget, t.t('prenota_ritiro'), const SchermataPrenotaRitiro() as Widget),
+      (const Icon(Icons.list_alt_outlined) as Widget, t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget),
     ];
     final prepagato = _credito?['attivo'] == true;
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 24), children: [
@@ -201,7 +202,10 @@ class SchermataProfiloState extends State<SchermataProfilo> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: c.cerchioIcona,
-                  child: Icon(icona, size: 28, color: context.temaScuro ? Colors.white : Stile.verdePulsanti),
+                  child: IconTheme.merge(
+                    data: IconThemeData(size: 28, color: context.temaScuro ? Colors.white : Stile.verdePulsanti),
+                    child: icona,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 // sempre lo spazio di due righe: le quattro icone restano allineate
@@ -406,7 +410,7 @@ class BarraInBasso extends StatelessWidget {
         NavigationDestination(icon: const Icon(Icons.public), label: t.t('spedizioni')),
         // nella barra il nome completo andrebbe su due righe: qui la sola prima parola
         // nota 373 V18: «Ritiro» al posto di Fatture
-        NavigationDestination(icon: const Icon(Icons.trolley), label: t.t('ritiro')),
+        NavigationDestination(icon: const IconaRitiro(size: 28), label: t.t('ritiro')),
         NavigationDestination(icon: const Icon(Icons.person_outline), label: t.t('profilo')),
       ],
     );

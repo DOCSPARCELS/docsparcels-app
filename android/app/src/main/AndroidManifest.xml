@@ -2,7 +2,7 @@
     <!-- Serve anche nella versione per i negozi: parla con my.docsparcels.com -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Doc's &amp; Parcels"
+        android:label="Docs&amp;Parcels"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
