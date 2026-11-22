@@ -386,7 +386,12 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
       _Riga(t.t('codice_fiscale'), _testo(fisc['codice_fiscale'])),
       _Riga('PEC', _testo(fisc['pec']).toLowerCase()),
       _Riga('SDI', _testo(fisc['codice_univoco'])),
-      _Riga('EORI', _testo(fisc['codice_eori'])),
+      // Nota 373 V24: come nella scheda admin, 1 = attivo, tutto il resto non attivo
+      if (_testo(fisc['codice_eori']) == '1')
+        _Riga('EORI', t.t('eori_attivo'), colore: Stile.verde)
+      else
+        _Riga('EORI', t.t('eori_non_attivo'),
+            colore: context.temaScuro ? const Color(0xFFFF9800) : const Color(0xFFB36A00)),
       _Sottotitolo(t.t('condizioni')),
       _Riga(t.t('termini_pagamento'), _testo(cond['termini']), stretta: true),
       _Riga(t.t('assicurazione'), _percentuale(cond['assicurazione'], t), stretta: true),
@@ -504,7 +509,10 @@ class _Sottotitolo extends StatelessWidget {
 }
 
 class _Riga extends StatelessWidget {
-  const _Riga(this.etichetta, this.valore, {this.stretta = false});
+  const _Riga(this.etichetta, this.valore, {this.stretta = false, this.colore});
+
+  /// Colore del valore, es. EORI attivo o no
+  final Color? colore;
 
   final String etichetta;
   final String valore;
@@ -519,7 +527,7 @@ class _Riga extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: stretta ? 0.5 : 3),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(width: 130, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13, height: alta))),
-        Expanded(child: Text(valore.isEmpty ? '-' : valore, style: TextStyle(fontSize: 13, height: alta))),
+        Expanded(child: Text(valore.isEmpty ? '-' : valore, style: TextStyle(fontSize: 13, height: alta, color: colore))),
       ]),
     );
   }
