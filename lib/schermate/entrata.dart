@@ -4,11 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../servizi/api.dart';
 import '../servizi/biometria.dart';
 import '../servizi/lingua.dart';
-import '../servizi/tema.dart';
 import '../stile.dart';
 import '../testi.dart';
 import '../widget/barra.dart';
 import 'profilo.dart';
+import '../widget/scelta_tema.dart';
 
 /// Schermata di entrata: email (o nome utente) e password.
 class SchermataEntrata extends StatefulWidget {
@@ -193,23 +193,7 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   ),
                   const SizedBox(height: 32),
                   // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
-                  ValueListenableBuilder<ThemeMode>(
-                    valueListenable: TemaApp.scelta,
-                    builder: (_, modo, __) => Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
-                      for (final (valore, icona, testo) in [
-                        (ThemeMode.system, Icons.brightness_auto_outlined, testi.t('tema_automatico')),
-                        (ThemeMode.light, Icons.light_mode_outlined, testi.t('tema_chiaro')),
-                        (ThemeMode.dark, Icons.dark_mode_outlined, testi.t('tema_scuro')),
-                      ])
-                        ChoiceChip(
-                          avatar: Icon(icona, size: 18, color: modo == valore ? Stile.verde : Stile.grigio),
-                          showCheckmark: false,
-                          label: Text(testo),
-                          selected: modo == valore,
-                          onSelected: (_) => TemaApp.imposta(valore),
-                        ),
-                    ]),
-                  ),
+                  const SceltaTema(),
                   const SizedBox(height: 20),
                   // Lingua dell'app, anche prima di entrare: nome e sotto la bandierina
                   Wrap(alignment: WrapAlignment.center, spacing: 2, children: [

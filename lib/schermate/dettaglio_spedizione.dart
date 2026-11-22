@@ -298,7 +298,19 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
 
   Widget _contenuto(Testi t) {
     final s = _sped ?? {};
-    final colore = _colore(s['colore_stato'] as String?);
+    // Nota 373 V6: la casella mostra l'ultima posizione del corriere. Finche' non c'e':
+    // senza AWB la spedizione e' ancora in lavorazione (arancio, come nelle Bozze),
+    // con l'AWB «Etichetta creata» (o «Consegnata»), come nell'elenco
+    final statoCorriere = '${s['stato'] ?? ''}'.trim();
+    final senzaEtichetta = '${s['awb'] ?? ''}'.trim().isEmpty;
+    final stato = statoCorriere.isNotEmpty
+        ? statoCorriere
+        : s['consegnata'] == true
+            ? t.t('consegnata')
+            : (senzaEtichetta ? t.t('in_lavorazione') : t.t('etichetta_creata'));
+    final colore = statoCorriere.isNotEmpty
+        ? _colore(s['colore_stato'] as String?)
+        : (senzaEtichetta && s['consegnata'] != true ? const Color(0xFFFF9800) : Stile.grigio);
     final totale = s['totale'] as num?;
     final colli = ((s['colli'] as List?) ?? []).whereType<Map>().toList();
     final peso = s['peso_tassato'] as num?;
@@ -310,7 +322,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
-              child: Text('${s['stato'] ?? ''}', style: TextStyle(color: colore, fontWeight: FontWeight.w600)),
+              child: Text(stato, style: TextStyle(color: colore, fontWeight: FontWeight.w600)),
             ),
             const Spacer(),
             if (totale != null)

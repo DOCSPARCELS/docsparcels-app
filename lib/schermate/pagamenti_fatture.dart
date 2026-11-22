@@ -100,6 +100,27 @@ Future<void> _uscitaSeChiaveScaduta(BuildContext context, ErroreApi e) async {
   Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SchermataEntrata()), (_) => false);
 }
 
+/// Scarica e apre il PDF di una fattura ([indirizzo] = campo 'pdf' del server)
+Future<void> apriPdfFattura(BuildContext context, String indirizzo, String numero) async {
+  final t = Testi.di(context);
+  void avviso(String testo) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo, textAlign: TextAlign.center)));
+  try {
+    final byte = await Api.scarica(indirizzo);
+    // Se la fattura non e' del cliente il sito rimanda all'elenco: arriva una pagina, non un PDF
+    if (byte.length < 4 || String.fromCharCodes(byte.take(4)) != '%PDF') throw ErroreApi('documento_non_disponibile');
+    final cartella = await getTemporaryDirectory();
+    final file = File('${cartella.path}/Fattura_${numero.replaceAll(RegExp(r'[^\w]+'), '_')}.pdf');
+    await file.writeAsBytes(byte, flush: true);
+    final esito = await OpenFilex.open(file.path);
+    if (esito.type != ResultType.done && context.mounted) avviso(t.t('documento_non_apribile'));
+  } on ErroreApi {
+    if (context.mounted) avviso(t.t('documento_non_disponibile'));
+  } catch (_) {
+    if (context.mounted) avviso(t.t('documento_non_apribile'));
+  }
+}
+
 Color _coloreFattura(Map<String, dynamic> f) =>
     f['stato'] == 'pagata' ? Stile.verde : (f['scaduta'] == true ? Stile.rosso : _arancio);
 
@@ -204,6 +225,7 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
   /// Nota 373 V5: fatture scelte per pagarle insieme (prima nella scheda «Da pagare»)
   final Set<int> _scelte = {};
   Map<String, dynamic> _credito = {};
+  dynamic _pdfAperto;
 
   @override
   bool get wantKeepAlive => true;
@@ -315,12 +337,15 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                           }
                           final f = _righe[i];
                           final colore = _coloreFattura(f);
+                          Future<void> apriDettaglio() async {
+                            final cambiato = await Navigator.of(context).push<bool>(
+                                MaterialPageRoute(builder: (_) => SchermataFattura(id: f['id'] as int)));
+                            if (cambiato == true) widget.cambiato();
+                          }
+
                           return _Riquadro(
-                            onTap: () async {
-                              final cambiato = await Navigator.of(context).push<bool>(
-                                  MaterialPageRoute(builder: (_) => SchermataFattura(id: f['id'] as int)));
-                              if (cambiato == true) widget.cambiato();
-                            },
+                            onTap: apriDettaglio,
+                            stretto: true,
                             child: Row(children: [
                               if (_pagabile(f))
                                 Checkbox(
@@ -341,6 +366,27 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                                 Text(_euro(f['totale'] as num?, t), style: const TextStyle(fontWeight: FontWeight.w600)),
                                 Text(_statoFattura(f, t), style: TextStyle(color: colore, fontSize: 12)),
                               ]),
+                              // Nota 373 V6: PDF subito, freccia (o tutta la riga) per il dettaglio
+                              if (f['pdf'] != null)
+                                IconButton(
+                                  tooltip: t.t('apri_pdf'),
+                                  visualDensity: VisualDensity.compact,
+                                  icon: _pdfAperto == f['id']
+                                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : const Icon(Icons.picture_as_pdf_outlined, color: Stile.verde),
+                                  onPressed: _pdfAperto != null
+                                      ? null
+                                      : () async {
+                                          setState(() => _pdfAperto = f['id']);
+                                          await apriPdfFattura(context, '${f['pdf']}', '${f['numero']}');
+                                          if (mounted) setState(() => _pdfAperto = null);
+                                        },
+                                ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                icon: const Icon(Icons.chevron_right, color: Stile.grigio),
+                                onPressed: apriDettaglio,
+                              ),
                             ]),
                           );
                         },
@@ -408,28 +454,10 @@ class _SchermataFatturaState extends State<SchermataFattura> {
   }
 
   Future<void> _apriPdf() async {
-    final t = Testi.di(context);
     setState(() => _pdf = true);
-    try {
-      final byte = await Api.scarica('${_f!['pdf']}');
-      // Se la fattura non e' del cliente il sito rimanda all'elenco: arriva una pagina, non un PDF
-      if (byte.length < 4 || String.fromCharCodes(byte.take(4)) != '%PDF') throw ErroreApi('documento_non_disponibile');
-      final cartella = await getTemporaryDirectory();
-      final file = File('${cartella.path}/Fattura_${'${_f!['numero']}'.replaceAll(RegExp(r'[^\w]+'), '_')}.pdf');
-      await file.writeAsBytes(byte, flush: true);
-      final esito = await OpenFilex.open(file.path);
-      if (esito.type != ResultType.done && mounted) _avviso(t.t('documento_non_apribile'));
-    } on ErroreApi {
-      if (mounted) _avviso(t.t('documento_non_disponibile'));
-    } catch (_) {
-      if (mounted) _avviso(t.t('documento_non_apribile'));
-    } finally {
-      if (mounted) setState(() => _pdf = false);
-    }
+    await apriPdfFattura(context, '${_f!['pdf']}', '${_f!['numero']}');
+    if (mounted) setState(() => _pdf = false);
   }
-
-  void _avviso(String testo) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo, textAlign: TextAlign.center)));
 
   Future<void> _paga() async {
     final f = _f!;
@@ -526,6 +554,7 @@ class _Credito extends StatefulWidget {
 
 class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
   Map<String, dynamic>? _c;
+  String _sezione = 'movimenti';
   bool _attesa = true;
   String? _errore;
 
@@ -633,6 +662,31 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
     return [base, ...dettagli].join(' · ');
   }
 
+  /// Importi positivi in verde senza «+», negativi col «−»
+  Widget _movimento(Map<String, dynamic> m, Testi t) {
+    final importo = (m['importo'] as num?) ?? 0;
+    final annullato = m['annullato'] == true || m['annullato'] == 1 || m['annullato'] == 1.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 64,
+          child: Text(_data(m['data_movimento'] ?? m['creato_il']), style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+        ),
+        Expanded(
+          child: Text(_descrizione(m, t), style: TextStyle(fontSize: 13, color: annullato ? Stile.grigio : null)),
+        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(
+            '${importo < 0 ? '−' : ''}${_euro(importo.abs(), t)}',
+            style: TextStyle(fontSize: 13, color: importo > 0 ? Stile.verde : null),
+          ),
+          if (m['saldo'] != null) Text(_euro(m['saldo'] as num?, t), style: const TextStyle(color: Stile.grigio, fontSize: 11)),
+        ]),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -648,7 +702,10 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
         ),
       );
     }
-    final movimenti = ((c['movimenti'] as List?) ?? []).cast<Map<String, dynamic>>();
+    final elenco = ((c['movimenti'] as List?) ?? [])
+        .cast<Map<String, dynamic>>()
+        .where((m) => (m['sezione'] ?? (m['tipo'] == 'ricarica' ? 'ricariche' : 'movimenti')) == _sezione)
+        .toList();
     return RefreshIndicator(
       onRefresh: carica,
       child: ListView(padding: const EdgeInsets.all(16), children: [
@@ -671,36 +728,17 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
         const SizedBox(height: 4),
         ElevatedButton.icon(icon: const Icon(Icons.add), label: Text(t.t('ricarica_credito')), onPressed: _ricarica),
         const SizedBox(height: 20),
-        _Titolo(t.t('movimenti')),
-        if (movimenti.isEmpty)
+        const SizedBox(height: 8),
+        // Nota 373 V6: ricariche (con i loro storni) nella loro scheda, non fra i movimenti
+        _SceltaSezione(
+          scelta: _sezione,
+          voci: {'movimenti': t.t('movimenti'), 'ricariche': t.t('ricariche')},
+          cambia: (v) => setState(() => _sezione = v),
+        ),
+        const SizedBox(height: 8),
+        if (elenco.isEmpty)
           Text(t.t('nessun_movimento'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
-        for (final m in movimenti)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(
-                width: 64,
-                child: Text(_data(m['data_movimento'] ?? m['creato_il']),
-                    style: const TextStyle(color: Stile.grigio, fontSize: 12)),
-              ),
-              Expanded(
-                child: Text(_descrizione(m, t),
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: m['annullato'] == 1 || m['annullato'] == 1.0 ? Stile.grigio : null)),
-              ),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(
-                  // segno davanti al simbolo: +€ 4,03 / -€ 4,03
-                  '${((m['importo'] as num?) ?? 0) > 0 ? '+' : ((m['importo'] as num?) ?? 0) < 0 ? '-' : ''}'
-                  '${_euro(((m['importo'] as num?) ?? 0).abs(), t)}',
-                  style: TextStyle(fontSize: 13, color: ((m['importo'] as num?) ?? 0) > 0 ? Stile.verde : null),
-                ),
-                if (m['saldo'] != null)
-                  Text(_euro(m['saldo'] as num?, t), style: const TextStyle(color: Stile.grigio, fontSize: 11)),
-              ]),
-            ]),
-          ),
+        for (final m in elenco) _movimento(m, t),
       ]),
     );
   }
@@ -721,10 +759,13 @@ class _Titolo extends StatelessWidget {
 }
 
 class _Riquadro extends StatelessWidget {
-  const _Riquadro({required this.child, this.onTap});
+  const _Riquadro({required this.child, this.onTap, this.stretto = false});
 
   final Widget child;
   final VoidCallback? onTap;
+
+  /// Meno spazio ai lati: righe con caselle e pulsanti a icona
+  final bool stretto;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -733,7 +774,7 @@ class _Riquadro extends StatelessWidget {
           borderRadius: Stile.angoli,
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: stretto ? const EdgeInsets.fromLTRB(4, 8, 0, 8) : const EdgeInsets.all(12),
             decoration: BoxDecoration(
                 color: context.colori.card, border: Border.all(color: context.colori.bordo), borderRadius: Stile.angoli),
             child: child,
@@ -778,4 +819,37 @@ class _Errore extends StatelessWidget {
           ]),
         ),
       );
+}
+
+/// Due schede interne (Movimenti / Ricariche): stessa grafica delle schede in alto
+class _SceltaSezione extends StatelessWidget {
+  const _SceltaSezione({required this.scelta, required this.voci, required this.cambia});
+
+  final String scelta;
+  final Map<String, String> voci;
+  final ValueChanged<String> cambia;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        for (final v in voci.entries)
+          Expanded(
+            child: InkWell(
+              onTap: () => cambia(v.key),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                        color: scelta == v.key ? Stile.verde : context.colori.bordo, width: scelta == v.key ? 3 : 1),
+                  ),
+                ),
+                child: Text(v.value,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: scelta == v.key ? Stile.verde : Stile.grigio,
+                        fontWeight: scelta == v.key ? FontWeight.w600 : FontWeight.w500)),
+              ),
+            ),
+          ),
+      ]);
 }

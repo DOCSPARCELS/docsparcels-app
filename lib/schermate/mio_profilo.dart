@@ -4,13 +4,13 @@ import 'package:image_picker/image_picker.dart';
 import '../config.dart';
 import '../servizi/api.dart';
 import '../servizi/lingua.dart';
-import '../servizi/tema.dart';
 import '../stile.dart';
 import '../widget/barra.dart';
 import '../testi.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
 import 'profilo.dart';
+import '../widget/scelta_tema.dart';
 
 /// Il mio profilo (nota 372): account, la mia scheda, rubrica, lingua. Come «Il mio profilo» e
 /// «La mia scheda» del sito; i dati fiscali nell'app sono solo da vedere.
@@ -427,17 +427,7 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
 
       // --------------------------------------------------------- aspetto (nota 373 V3)
       _Titolo(t.t('aspetto')),
-      ValueListenableBuilder<ThemeMode>(
-        valueListenable: TemaApp.scelta,
-        builder: (_, modo, __) => Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final (valore, testo) in [
-            (ThemeMode.system, t.t('tema_automatico')),
-            (ThemeMode.light, t.t('tema_chiaro')),
-            (ThemeMode.dark, t.t('tema_scuro')),
-          ])
-            ChoiceChip(label: Text(testo), selected: modo == valore, onSelected: (_) => TemaApp.imposta(valore)),
-        ]),
-      ),
+      const SceltaTema(),
       const SizedBox(height: 36),
       OutlinedButton.icon(
         style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),

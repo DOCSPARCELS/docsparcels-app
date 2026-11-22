@@ -54,7 +54,12 @@ class AppDocsParcels extends StatelessWidget {
           darkTheme: Stile.tema(scuro: true),
           themeMode: tema,
           locale: lingua,
-          supportedLocales: const [Locale('it'), Locale('en'), Locale('es'), Locale('fr'), Locale('de')],
+          supportedLocales: const [Locale('it'), Locale('en', 'GB'), Locale('es'), Locale('fr'), Locale('de')],
+          // Telefono in inglese (anche americano): inglese britannico, date giorno-mese-anno (nota 373 V6)
+          localeResolutionCallback: (telefono, supportate) {
+            final codice = telefono?.languageCode ?? 'it';
+            return supportate.firstWhere((l) => l.languageCode == codice, orElse: () => const Locale('it'));
+          },
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

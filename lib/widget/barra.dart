@@ -25,7 +25,12 @@ PreferredSizeWidget barraApp(BuildContext context,
     centerTitle: true,
     leading: inizio,
     title: Column(mainAxisSize: MainAxisSize.min, children: [
-      const LogoApp(),
+      // Nota 373 V6: toccando il logo si torna alla pagina principale, da qualsiasi schermata
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+        child: const LogoApp(),
+      ),
       if (titolo != null)
         Padding(
           padding: const EdgeInsets.only(top: 6),

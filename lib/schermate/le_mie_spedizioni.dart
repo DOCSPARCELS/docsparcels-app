@@ -72,7 +72,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
       _errore = null;
       _daPagare = [];
     });
-    if (_bozze) _caricaDaPagare(_giro);
+    if (_bozze || _filtri[_schede.index] == '') _caricaDaPagare(_giro);
     await _caricaAltre();
   }
 
@@ -89,6 +89,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                 ...s,
                 'tipo': 'spedizione',
                 'mos': s['id'],
+                'data': Api.dataBreve('${s['data'] ?? ''}'),
                 'totale': s['importo'],
                 'da_pagare': true,
               })
@@ -239,7 +240,22 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
         ),
       );
     }
-    final righe = [..._daPagare, ..._righe];
+    // Nota 373 V6: una spedizione da pagare gia' in elenco prende li' il «Paga» (niente doppioni);
+    // nelle Bozze quelle che mancano vanno in cima
+    final daPagare = {for (final d in _daPagare) d['id']: d};
+    final presenti = {for (final r in _righe) r['id']};
+    final righe = [
+      if (_bozze) ..._daPagare.where((d) => !presenti.contains(d['id'])),
+      for (final r in _righe)
+        daPagare.containsKey(r['id'])
+            ? {
+                ...r,
+                'da_pagare': true,
+                'pagamento': daPagare[r['id']]!['pagamento'],
+                'scadenza_link': daPagare[r['id']]!['scadenza_link'],
+              }
+            : r,
+    ];
     if (righe.isEmpty) {
       return _attesa
           ? const Center(child: CircularProgressIndicator())
@@ -284,7 +300,12 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
     );
   }
 
+  /// Bozze, richieste e spedizioni da pagare: «In lavorazione» in arancio a destra (nota 373 V5)
+  static bool _inLavorazione(Map<String, dynamic> r) =>
+      r['da_pagare'] == true || const {'bozza', 'da_completare', 'richiesta'}.contains('${r['tipo']}');
+
   Widget _riga(Testi t, Map<String, dynamic> r) {
+    final lavorazione = _inLavorazione(r);
     final colore = _colore(r['colore'] as String?);
     final destinatario = Api.nomeProprio('${r['destinatario'] ?? ''}'.trim());
     final arrivo = [Api.nomeProprio('${r['dest_citta'] ?? ''}'.trim()), '${r['dest_codice_nazione'] ?? ''}'.trim()]
@@ -319,7 +340,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
             const SizedBox(height: 6),
             Row(
               children: [
-                if (!_bozze) ...[
+                if (!lavorazione) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
@@ -335,7 +356,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                     style: const TextStyle(color: Stile.grigio, fontSize: 12),
                   ),
                 ),
-                if (_bozze) ...[
+                if (lavorazione) ...[
                   const SizedBox(width: 8),
                   Text(t.t('in_lavorazione'), style: const TextStyle(color: _arancio, fontSize: 12, fontWeight: FontWeight.w600)),
                 ],

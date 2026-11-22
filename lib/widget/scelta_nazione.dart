@@ -60,10 +60,10 @@ class _SceltaNazioneState extends State<SceltaNazione> {
                   ? Center(child: Text(widget.testi.t('nessuna_nazione'), style: const TextStyle(color: Stile.grigio)))
                   : ListView.builder(
                       itemCount: elenco.length,
+                      // Nota 373 V6: nomi piu' grandi, ben leggibili
                       itemBuilder: (_, i) => ListTile(
-                        dense: true,
-                        title: Text('${elenco[i]['nome']}'),
-                        trailing: Text('${elenco[i]['codice']}', style: const TextStyle(color: Stile.grigio)),
+                        title: Text('${elenco[i]['nome']}', style: const TextStyle(fontSize: 17)),
+                        trailing: Text('${elenco[i]['codice']}', style: const TextStyle(color: Stile.grigio, fontSize: 15)),
                         onTap: () => Navigator.pop(context, elenco[i]),
                       ),
                     ),
