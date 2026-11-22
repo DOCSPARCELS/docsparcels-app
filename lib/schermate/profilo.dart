@@ -313,8 +313,10 @@ class _UltimaSpedizione extends StatelessWidget {
                 ),
               ] else
                 const Spacer(),
+              // lo stato sempre a destra (fino a mezza riga, poi va a capo)
               if (stato.isNotEmpty)
-                Flexible(
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.42),
                   child: Text(stato,
                       maxLines: 2,
                       textAlign: TextAlign.right,
