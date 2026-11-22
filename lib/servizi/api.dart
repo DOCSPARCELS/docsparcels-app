@@ -179,6 +179,10 @@ class Api {
   static Future<Map<String, dynamic>> ritiri({int pagina = 1}) async =>
       ((await _getCorpo('/cliente/api/ritiri?page=$pagina'))['data'] as Map<String, dynamic>?) ?? {};
 
+  /// Nota 373 V30: scheda di un ritiro del cliente, con colli e note (senza le righe interne).
+  static Future<Map<String, dynamic>> ritiro(int id) async =>
+      ((await _getCorpo('/cliente/api/ritiri/$id'))['data'] as Map<String, dynamic>?) ?? {};
+
   /// Salva in rubrica un mittente o destinatario scritto a mano.
   /// Nota 373 V18: ritiro chiesto dal cliente (come «Nuovo ritiro» del sito). Ritorna {messaggio, ritiro_id}.
   static Future<Map<String, dynamic>> prenotaRitiro(Map<String, dynamic> dati) async =>

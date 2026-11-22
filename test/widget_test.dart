@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:docsparcels_app/main.dart';
 import 'package:docsparcels_app/schermate/profilo.dart';
-import 'package:docsparcels_app/schermate/scheda_ritiro.dart';
 import 'package:docsparcels_app/servizi/api.dart';
 import 'package:docsparcels_app/testi.dart';
 import 'package:docsparcels_app/widget/barra.dart';
@@ -29,12 +28,6 @@ void main() {
     expect(Api.rigaLuogo('00185', '00185 Roma', 'RM', 'Italia'), '00185 Roma RM Italia');
     expect(Api.rigaLuogo('20121', 'Milano', 'MI'), '20121 Milano MI');
     expect(Api.rigaLuogo('', 'Dubai', '', 'Emirati Arabi Uniti'), 'Dubai Emirati Arabi Uniti');
-  });
-
-  test('note del ritiro senza annotazioni interne', () {
-    expect(SchermataSchedaRitiro.noteCliente('\n[Email Fornitore] CP: 123'), '');
-    expect(SchermataSchedaRitiro.noteCliente('Citofono 4\r\n[Manuale] x\nsecondo piano'), 'Citofono 4 · secondo piano');
-    expect(SchermataSchedaRitiro.noteCliente(null), '');
   });
 
   test('numero della fattura senza anno', () {

@@ -135,12 +135,9 @@ class _SchermataRitiriState extends State<SchermataRitiri> {
 
   static String _testo(dynamic v) => v == null ? '' : '$v'.trim();
 
-  /// Nota 373 V29: la scheda. L'elenco va dal piu' recente: il primo di una spedizione e' il suo ultimo ritiro.
-  void _apri(int indice) {
-    final r = _righe[indice];
-    final ultimo = !_righe.take(indice).any((x) => x['spedizione_id'] == r['spedizione_id']);
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => SchermataSchedaRitiro(ritiro: r, ultimoDellaSpedizione: ultimo)));
+  /// Nota 373 V29: la scheda
+  void _apri(Map<String, dynamic> r) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SchermataSchedaRitiro(ritiro: r)));
   }
 
   Widget _riga(Testi t, int indice) {
@@ -187,7 +184,7 @@ class _SchermataRitiriState extends State<SchermataRitiri> {
       borderRadius: Stile.angoli,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _apri(indice),
+        onTap: () => _apri(r),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
           child: Row(children: [Expanded(child: dati), Icon(Icons.chevron_right, color: Stile.grigio)]),

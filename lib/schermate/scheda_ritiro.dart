@@ -26,27 +26,20 @@ String indirizzoRitiro(Map<String, dynamic> r) => [
     ].where((v) => v.isNotEmpty).join('\n');
 
 /// Scheda di un ritiro (nota 373 V29), aperta dall'elenco «Ritiri».
-/// Giorno, corriere, indirizzo, stato e prenotazione arrivano dall'elenco. Colli e note il server
-/// li da' solo con la spedizione, e solo per il suo ritiro piu' recente ([ultimoDellaSpedizione]).
+/// Si mostra subito con i dati dell'elenco; colli, note e stato aggiornato arrivano da
+/// GET /cliente/api/ritiri/<id> (nota 373 V30), che vale anche per i ritiri senza spedizione.
+/// Le note le ripulisce il server dalle righe interne: qui si mostrano come arrivano.
 class SchermataSchedaRitiro extends StatefulWidget {
-  const SchermataSchedaRitiro({super.key, required this.ritiro, required this.ultimoDellaSpedizione});
+  const SchermataSchedaRitiro({super.key, required this.ritiro});
 
   final Map<String, dynamic> ritiro;
-  final bool ultimoDellaSpedizione;
-
-  /// Le righe fra parentesi quadre sono annotazioni interne (es. «[Email …]»): mai al cliente,
-  /// come nella scheda ritiro del sito.
-  static String noteCliente(dynamic note) => _testo(note)
-      .split('\n')
-      .map((r) => r.trim())
-      .where((r) => r.isNotEmpty && !r.startsWith('['))
-      .join(' · ');
 
   @override
   State<SchermataSchedaRitiro> createState() => _SchermataSchedaRitiroState();
 }
 
 class _SchermataSchedaRitiroState extends State<SchermataSchedaRitiro> {
+  late Map<String, dynamic> _dati = widget.ritiro;
   List<Map> _colli = [];
   String _note = '';
   bool _attesa = false;
@@ -54,26 +47,24 @@ class _SchermataSchedaRitiroState extends State<SchermataSchedaRitiro> {
   @override
   void initState() {
     super.initState();
-    final id = widget.ritiro['spedizione_id'];
-    if (id is int && id > 0 && widget.ultimoDellaSpedizione) {
+    final id = widget.ritiro['id'];
+    if (id is int) {
       _attesa = true;
-      _caricaDallaSpedizione(id);
+      _carica(id);
     }
   }
 
-  Future<void> _caricaDallaSpedizione(int id) async {
+  Future<void> _carica(int id) async {
     try {
-      final s = await Api.spedizione(id);
-      final r = s['ritiro'];
-      if (!mounted || r is! Map) return;
-      // un altro giorno = non e' questo ritiro
-      if (Api.dataBreve(_testo(r['data_ritiro'])) != _testo(widget.ritiro['giorno'])) return;
+      final r = await Api.ritiro(id);
+      if (!mounted) return;
       setState(() {
-        _note = SchermataSchedaRitiro.noteCliente(r['note']);
-        _colli = ((s['colli'] as List?) ?? []).whereType<Map>().toList();
+        _dati = {...widget.ritiro, ...r};
+        _note = _testo(r['note']);
+        _colli = ((r['colli'] as List?) ?? []).whereType<Map>().toList();
       });
     } on ErroreApi catch (e) {
-      // se la spedizione non si puo' leggere la scheda resta con i dati dell'elenco
+      // se il server non risponde la scheda resta con i dati dell'elenco
       if (e.codice != 'chiave_non_valida') return;
       await Api.esci();
       if (!mounted) return;
@@ -113,7 +104,7 @@ class _SchermataSchedaRitiroState extends State<SchermataSchedaRitiro> {
   @override
   Widget build(BuildContext context) {
     final t = Testi.di(context);
-    final r = widget.ritiro;
+    final r = _dati;
     final prenotazione = _testo(r['prenotazione']);
     return Scaffold(
       appBar: barraApp(context, titolo: t.t('ritiro')),
