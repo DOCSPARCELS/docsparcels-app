@@ -12,6 +12,7 @@ import '../widget/barra.dart';
 import '../testi.dart';
 import 'entrata.dart';
 import 'profilo.dart';
+import '../widget/striscia_servizio.dart';
 
 /// Dettaglio di una spedizione (nota 368): stato, percorso, colli, totale, passaggi del
 /// tracciamento e documenti. Si apre dall'elenco e toccando una notifica.
@@ -299,49 +300,12 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     final colli = ((s['colli'] as List?) ?? []).whereType<Map>().toList();
     final peso = s['peso_tassato'] as num?;
     final etichetta = _documenti.where((d) => d['tipo'] == 'awb').firstOrNull;
+    // l'etichetta ha gia' il suo pulsante: nell'elenco restano gli altri documenti
+    final altri = _documenti.where((d) => d['tipo'] != 'awb').toList();
     final invia = s['invia_etichetta_mittente'] == true;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Nota 373 V13: i pulsanti sopra il costo, come nel gestionale: «Invia» viola, «Etichetta» bianco
-        if (!widget.vecchia && (invia || etichetta != null)) ...[
-          Row(children: [
-            if (invia)
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6A1B9A),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(44),
-                  ),
-                  icon: _scaricando == 'etichetta'
-                      ? const SizedBox(
-                          width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.send, size: 18),
-                  label: Text(t.t('invia')),
-                  onPressed: _scaricando == null ? _inviaEtichetta : null,
-                ),
-              ),
-            if (invia && etichetta != null) const SizedBox(width: 10),
-            if (etichetta != null)
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF1E1E1E),
-                    side: const BorderSide(color: Color(0xFFDDDDDD)),
-                    minimumSize: const Size.fromHeight(44),
-                  ),
-                  icon: _scaricando == etichetta['url']
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFFFA0F00)),
-                  label: Text(t.t('doc_etichetta_breve')),
-                  onPressed: _scaricando == null ? () => _apriDocumento(etichetta) : null,
-                ),
-              ),
-          ]),
-          const SizedBox(height: 14),
-        ],
         // Nota 373 V8: niente stato qui (c'e' il tracciamento sotto); importo a destra con la sua scritta
         if (totale != null)
           Row(
@@ -367,12 +331,14 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         ],
         const SizedBox(height: 16),
         _riga(t.t('data_spedizione'), '${s['data'] ?? ''}'),
-        _riga(t.t('servizio'), [s['servizio'], s['vettore']].where((v) => v != null && '$v'.isNotEmpty).join(' · ')),
+        _rigaServizio(t, s),
         _riga('AWB', '${s['awb'] ?? ''}'),
         _riga(t.t('colli_titolo'), [
           if (colli.isNotEmpty) '${colli.length}',
           if (peso != null && peso > 0) '${_numero(peso, t.lingua)} kg',
         ].join(' · ')),
+        // Nota 373 V17: peso e misure di ogni collo
+        for (var i = 0; i < colli.length; i++) _riga('${t.t('collo')} ${i + 1}', _misureCollo(colli[i], t.lingua)),
         _persona(t.t('mittente'), s['mitt']),
         _persona(t.t('destinatario'), s['dest']),
         const SizedBox(height: 20),
@@ -386,12 +352,51 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         if (!widget.vecchia) ...[
           const SizedBox(height: 20),
           _titolo(t.t('documenti_spedizione')),
-          if (_documenti.isEmpty)
+            // Nota 373 V17: «Invia» ed «Etichetta» dentro Documenti (un solo «Etichetta»)
+          if (!widget.vecchia && (invia || etichetta != null)) ...[
+            Row(children: [
+              if (invia)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6A1B9A),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(44),
+                    ),
+                    icon: _scaricando == 'etichetta'
+                        ? const SizedBox(
+                            width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.send, size: 18),
+                    label: Text(t.t('invia')),
+                    onPressed: _scaricando == null ? _inviaEtichetta : null,
+                  ),
+                ),
+              if (invia && etichetta != null) const SizedBox(width: 10),
+              if (etichetta != null)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1E1E1E),
+                      side: const BorderSide(color: Color(0xFFDDDDDD)),
+                      minimumSize: const Size.fromHeight(44),
+                    ),
+                    icon: _scaricando == etichetta['url']
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFFFA0F00)),
+                    label: Text(t.t('doc_etichetta_breve')),
+                    onPressed: _scaricando == null ? () => _apriDocumento(etichetta) : null,
+                  ),
+                ),
+            ]),
+            const SizedBox(height: 4),
+          ],
+          if (altri.isEmpty && etichetta == null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(t.t('nessun_documento'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
             ),
-          for (final d in _documenti)
+          for (final d in altri)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: OutlinedButton.icon(
@@ -412,6 +417,41 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         ],
       ],
     );
+  }
+
+  /// Nota 373 V17: servizio in nero (bianco nel tema scuro) con la striscia sfumata del suo colore
+  Widget _rigaServizio(Testi t, Map<String, dynamic> s) {
+    final nome = '${s['servizio'] ?? ''}'.trim();
+    final vettore = '${s['vettore'] ?? ''}'.trim();
+    if (nome.isEmpty && vettore.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        SizedBox(width: 120, child: Text(t.t('servizio'), style: TextStyle(color: Stile.grigio, fontSize: 13))),
+        if (nome.isNotEmpty) ...[
+          StrisciaServizio(colore: StrisciaServizio.daTesto(s['colore_servizio']), larghezza: 30, altezza: 18),
+          const SizedBox(width: 6),
+        ],
+        Expanded(
+          child: Text.rich(TextSpan(children: [
+            if (nome.isNotEmpty)
+              TextSpan(text: nome, style: TextStyle(color: context.colori.testo, fontWeight: FontWeight.w600)),
+            if (vettore.isNotEmpty) TextSpan(text: '${nome.isNotEmpty ? ' · ' : ''}$vettore'),
+          ]), style: const TextStyle(fontSize: 13)),
+        ),
+      ]),
+    );
+  }
+
+  /// «2 kg · 30 × 20 × 10 cm»
+  static String _misureCollo(Map c, String lingua) {
+    num? n(dynamic v) => v is num ? v : num.tryParse('$v');
+    final peso = n(c['peso']);
+    final misure = [n(c['lunghezza']), n(c['larghezza']), n(c['altezza'])];
+    return [
+      if (peso != null && peso > 0) '${_numero(peso, lingua)} kg',
+      if (misure.every((m) => m != null && m > 0)) '${misure.map((m) => _numero(m!, lingua)).join(' × ')} cm',
+    ].join(' · ');
   }
 
   static String _numero(num v, String lingua) {

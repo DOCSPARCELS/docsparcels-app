@@ -11,6 +11,7 @@ import 'entrata.dart';
 import 'nuova_spedizione.dart';
 import 'pagamenti_fatture.dart';
 import 'profilo.dart';
+import '../widget/striscia_servizio.dart';
 
 /// Le mie spedizioni (nota 368): le stesse righe e gli stessi filtri dell'elenco del sito.
 class SchermataLeMieSpedizioni extends StatefulWidget {
@@ -300,6 +301,9 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
     );
   }
 
+  /// Nota 373 V17: colori dello stato piu' scuri nel tema chiaro (sul bianco erano troppo chiari)
+  Color _scuro(Color c) => context.temaScuro ? c : (Color.lerp(c, Colors.black, 0.35) ?? c);
+
   /// MOS a gruppi: 5557171 -> 555 7171
   static String _mos(dynamic v) {
     final s = '$v';
@@ -372,19 +376,13 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
             _lato(t.t('destinatario'), r['destinatario'], r['dest_cap'], r['dest_citta'],
                 r['dest_nazione'] ?? r['dest_codice_nazione']),
             const SizedBox(height: 4),
+            // Nota 373 V17: striscia larga e sfumata, nome del servizio nero; lo stato sotto, a destra
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Nota 373 V11: striscia col colore del servizio (come nel preventivo) e nome in verde
                 if ('${r['servizio'] ?? ''}'.trim().isNotEmpty) ...[
-                  Container(
-                    width: 6,
-                    height: 16,
-                    margin: const EdgeInsets.only(top: 1, right: 6),
-                    decoration: BoxDecoration(
-                        color: r['colore_servizio'] == null ? Stile.verde : _colore(r['colore_servizio'] as String?),
-                        borderRadius: Stile.angoli),
-                  ),
+                  StrisciaServizio(colore: StrisciaServizio.daTesto(r['colore_servizio']), larghezza: 30, altezza: 18),
+                  const SizedBox(width: 6),
                 ],
                 Expanded(
                   child: Text.rich(
@@ -392,7 +390,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                       if ('${r['servizio'] ?? ''}'.trim().isNotEmpty)
                         TextSpan(
                             text: '${r['servizio']}'.trim(),
-                            style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
+                            style: TextStyle(color: context.colori.testo, fontWeight: FontWeight.w600)),
                       if ('${r['awb'] ?? ''}'.trim().isNotEmpty)
                         TextSpan(
                             text: '${'${r['servizio'] ?? ''}'.trim().isNotEmpty ? ' · ' : ''}${r['awb']}',
@@ -403,28 +401,35 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                // Nota 373 V9: lo stato a destra; se e' lungo va su due righe
-                if (!lavorazione && '${r['stato'] ?? ''}'.trim().isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.45),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
-                      child: Text('${r['stato']}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          style: TextStyle(color: colore, fontSize: 12)),
-                    ),
-                  ),
-                ],
-                if (lavorazione) ...[
-                  const SizedBox(width: 8),
-                  Text(t.t('in_lavorazione'), style: const TextStyle(color: _arancio, fontSize: 12, fontWeight: FontWeight.w600)),
-                ],
               ],
             ),
+            // stato sotto l'AWB, a destra, piu' scuro (nel tema chiaro); se e' lungo va su due righe
+            if (!lavorazione && '${r['stato'] ?? ''}'.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(border: Border.all(color: _scuro(colore)), borderRadius: Stile.angoli),
+                    child: Text('${r['stato']}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(color: _scuro(colore), fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+            ],
+            if (lavorazione) ...[
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(t.t('in_lavorazione'),
+                    style: TextStyle(color: _scuro(_arancio), fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ],
             if (r['da_pagare'] == true && r['pagamento'] != null) ...[
               const SizedBox(height: 8),
               Row(children: [

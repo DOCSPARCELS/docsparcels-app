@@ -8,6 +8,7 @@ import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
 import 'nuova_spedizione.dart';
 import 'profilo.dart';
+import '../widget/striscia_servizio.dart';
 
 /// Preventivo veloce: partenza, arrivo, documenti o pacco, colli e «Calcola».
 /// I prezzi li calcola il server (/cliente/api/calcola), gli stessi dell'area cliente.
@@ -258,7 +259,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         labelText: etichetta,
         isDense: true,
         enabledBorder: _mancanti.contains(campo)
-            ? const OutlineInputBorder(borderRadius: Stile.angoli, borderSide: BorderSide(color: Stile.rosso))
+            ? const OutlineInputBorder(borderRadius: Stile.angoli, borderSide: BorderSide(color: Stile.rosso, width: 2))
             : null,
       );
 
@@ -381,57 +382,59 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
     );
   }
 
-  /// Il colore del servizio come nel gestionale (campo colore della tabella servizi)
-  static Color _coloreServizio(dynamic esadecimale) {
-    final testo = '${esadecimale ?? ''}'.replaceAll('#', '').trim();
-    final valore = int.tryParse(testo, radix: 16);
-    if (testo.length != 6 || valore == null) return Stile.verde;
-    return Color(0xFF000000 | valore);
-  }
-
   Widget _tariffa(Testi testi, Map<String, dynamic> t) {
     final scelta = _tariffaScelta != null && _tariffaScelta == t['id'];
     return GestureDetector(
       onTap: () => setState(() => _tariffaScelta = scelta ? null : t['id'] as int?),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          // nota 373 V11: striscia piu' larga
-          border: Border(left: BorderSide(color: _coloreServizio(t['colore']), width: 8)),
-          color: context.colori.card,
-          borderRadius: Stile.angoli,
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(
-            children: [
-              Expanded(child: Text('${t['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600))),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(SchermataProfiloState.euro((t['totale'] as num?) ?? 0, testi.lingua),
-                      style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
-                  if (t['iva_inclusa'] == true)
-                    Text(testi.t('iva_inclusa'), style: TextStyle(color: Stile.grigio, fontSize: 11)),
-                ],
-              ),
-            ],
-          ),
-          // Nota 373 V11: toccando la tariffa compare «Spedisci», rosso
-          if (scelta) ...[
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Stile.rosso, foregroundColor: Colors.white, minimumSize: const Size(130, 40)),
-                icon: const Icon(Icons.local_shipping_outlined, size: 18),
-                label: Text(testi.t('spedisci')),
-                onPressed: () => _spedisci(t),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(color: context.colori.card, borderRadius: Stile.angoli),
+        child: IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // nota 373 V17: striscia tre volte piu' larga, sfumata verso destra
+            StrisciaServizio(colore: StrisciaServizio.daTesto(t['colore'])),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 12, 14, 12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Row(
+                    children: [
+                      Expanded(
+                          child: Text('${t['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // nota 373 V17: importo nero (bianco nel tema scuro), come il nome
+                          Text(SchermataProfiloState.euro((t['totale'] as num?) ?? 0, testi.lingua),
+                              style: TextStyle(color: context.colori.testo, fontWeight: FontWeight.w600, fontSize: 16)),
+                          if (t['iva_inclusa'] == true)
+                            Text(testi.t('iva_inclusa'), style: TextStyle(color: Stile.grigio, fontSize: 11)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // Nota 373 V11: toccando la tariffa compare «Spedisci», rosso (V17: col globo)
+                  if (scelta) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Stile.rosso,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(130, 40)),
+                        icon: const Icon(Icons.public, size: 18),
+                        label: Text(testi.t('spedisci')),
+                        onPressed: () => _spedisci(t),
+                      ),
+                    ),
+                  ],
+                ]),
               ),
             ),
-          ],
-        ]),
+          ]),
+        ),
       ),
     );
   }

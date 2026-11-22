@@ -176,7 +176,10 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       _dest.nazione = _nazione('IT');
       _dataSpedizione = '${_dati['prima_data_spedizione'] ?? ''}';
       _colli.first.imballaggio = _imballaggioPredefinito();
-      if (widget.daPreventivo != null) _compilaDaPreventivo(widget.daPreventivo!);
+      if (widget.daPreventivo != null) {
+        _compilaDaPreventivo(widget.daPreventivo!);
+        _mancanti = _controllaSezione('mitt', _mitt);
+      }
       if (widget.bozzaId != null) _compilaDaBozza(await Api.datiBozza(widget.bozzaId!));
       if (!mounted) return;
       setState(() => _attesa = false);
@@ -429,6 +432,10 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   static final _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
   static final _snc = RegExp(r'\bs\.?\s*n\.?\s*c\.?(\s|$)', caseSensitive: false);
 
+  /// Sezione con qualcosa gia' scritto (non un destinatario nuovo, ancora vuoto)
+  static bool _compilata(_Sezione s) =>
+      [s.societa, s.contatto, s.indirizzo, s.cap, s.citta].any((c) => c.text.trim().isNotEmpty);
+
   Set<String> _controllaSezione(String pre, _Sezione s) {
     final m = <String>{};
     void vuoto(String campo, TextEditingController c) {
@@ -524,6 +531,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       if (_errore == null) {
         _passo++;
         _mancanti = {};
+        // nota 373 V17: destinatario gia' compilato (rubrica, preventivo, bozza) -> mancanti subito in rosso
+        if (_passo == 1 && _compilata(_dest)) _mancanti = _controllaSezione('dest', _dest);
       }
     });
   }
@@ -677,7 +686,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
 
   Future<void> _mostraBonifico(String numero, Map<String, dynamic> p) async {
     await RiquadroBonifico.mostra(context, p, titolo: _t.t('spedizione_inviata').replaceAll('{n}', numero));
-    if (mounted) Navigator.of(context).pop();
+    // nota 373 V17: dopo l'invio si torna alla home (anche se si era partiti dal preventivo)
+    if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   Future<void> _esito(String testo, {required bool riuscito}) async {
@@ -692,7 +702,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         actions: [ElevatedButton(onPressed: () => Navigator.pop(c), child: Text(_t.t('ok')))],
       ),
     );
-    if (mounted) Navigator.of(context).pop();
+    // nota 373 V17: dopo l'invio si torna alla home (anche se si era partiti dal preventivo)
+    if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   // ------------------------------------------------------------------ rubrica e punti
@@ -723,7 +734,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       s.compila(SchermataNuovaSpedizione.campiDaRubrica(scelto), _nazione('${scelto['codice_nazione_op'] ?? ''}'));
       s.codiceRubrica = scelto['tipo'] == 'contatto' ? '${scelto['codice'] ?? ''}' : null;
       s.salvaInRubrica = false;
-      _mancanti = {};
+      // nota 373 V17: i dati che mancano al contatto si vedono subito in rosso
+      _mancanti = _controllaSezione(identical(s, _mitt) ? 'mitt' : 'dest', s);
       _errore = null;
     });
   }
@@ -778,7 +790,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         labelText: etichetta,
         isDense: true,
         enabledBorder: _mancanti.contains(campo)
-            ? const OutlineInputBorder(borderRadius: Stile.angoli, borderSide: BorderSide(color: Stile.rosso))
+            ? const OutlineInputBorder(borderRadius: Stile.angoli, borderSide: BorderSide(color: Stile.rosso, width: 2))
             : null,
       );
 

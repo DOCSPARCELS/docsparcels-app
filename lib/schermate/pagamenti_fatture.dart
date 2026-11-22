@@ -590,7 +590,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
     }
   }
 
-  Future<double?> _chiediImporto(String titolo, String etichetta, {double? iniziale}) async {
+  Future<double?> _chiediImporto(String titolo, String etichetta, {double? iniziale, String? nota}) async {
     final t = Testi.di(context);
     final campo = TextEditingController(
         text: iniziale == null ? '' : iniziale.toStringAsFixed(2).replaceAll('.', t.lingua == 'en' ? '.' : ','));
@@ -616,6 +616,12 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
               ),
             ),
           ]),
+          // nota 373 V17: sotto i pulsanti, a cosa serve
+          if (nota != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Text(nota, textAlign: TextAlign.center, style: TextStyle(color: context.colori.testo, fontSize: 13)),
+            ),
         ],
       ),
     );
@@ -640,7 +646,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
 
   Future<void> _soglia() async {
     final t = Testi.di(context);
-    final valore = await _chiediImporto(t.t('notifica_soglia'), t.t('soglia_credito'),
+    final valore = await _chiediImporto(t.t('notifica_soglia'), t.t('soglia_credito'), nota: t.t('soglia_spiegazione'),
         iniziale: (_c?['soglia'] as num?)?.toDouble());
     if (!mounted || valore == null || valore < 0) return;
     try {
