@@ -363,43 +363,39 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
         ),
       ]),
       _Sottotitolo(t.t('indirizzo_operativo')),
-      _Riga(t.t('societa'), _testo(mod['societa_op'])),
-      _Riga(t.t('referente'), _testo(mod['resp_settore_op'])),
-      _Riga(t.t('indirizzo'), [mod['indirizzo_op'], mod['indirizzo2_op']].map(_testo).where((v) => v.isNotEmpty).join(', ')),
-      _Riga(t.t('localita'),
-          [mod['cap_op'], mod['citta_op'], mod['provincia_op']].map(_testo).where((v) => v.isNotEmpty).join(' · ')),
-      _Riga(t.t('nazione'), _testo(mod['nazione_op'])),
-      _Riga(t.t('telefono'), _testo(mod['telefono_op'])),
-      _Riga(t.t('email_campo'), _testo(mod['email_op'])),
+      // Nota 373 V23: righe raccolte come la sede legale; sotto, staccati, i recapiti
+      _Riga(t.t('indirizzo'), _blocco(mod, 'op'), stretta: true),
+      const SizedBox(height: 10),
+      _Riga(t.t('referente'), _testo(mod['resp_settore_op']), stretta: true),
+      _Riga(t.t('telefono'), _testo(mod['telefono_op']), stretta: true),
+      _Riga(t.t('email_campo'), _testo(mod['email_op']), stretta: true),
       _Sottotitolo(t.t('ritiro_abituale')),
-      _Riga(t.t('mattino'), _fascia(mod['ritiro_ora_mattino_dalle'], mod['ritiro_ora_mattino_alle'])),
-      _Riga(t.t('pomeriggio'), _fascia(mod['ritiro_ora_pomeriggio_dalle'], mod['ritiro_ora_pomeriggio_alle'])),
-      _Riga(t.t('pronti_dalle'), _testo(mod['ritiro_ora_pronti_dalle'])),
-      _Riga(t.t('punto_ritiro'), _testo(mod['ritiro_punto'])),
-      _Riga(t.t('note_ritiro'), _testo(mod['ritiro_istruzioni_note'])),
+      _Riga(t.t('mattino'), _fascia(mod['ritiro_ora_mattino_dalle'], mod['ritiro_ora_mattino_alle']), stretta: true),
+      _Riga(t.t('pomeriggio'), _fascia(mod['ritiro_ora_pomeriggio_dalle'], mod['ritiro_ora_pomeriggio_alle']),
+          stretta: true),
+      _Riga(t.t('pronti_dalle'), _testo(mod['ritiro_ora_pronti_dalle']), stretta: true),
+      _Riga(t.t('punto_ritiro'), _testo(mod['ritiro_punto']), stretta: true),
+      _Riga(t.t('note_ritiro'), _testo(mod['ritiro_istruzioni_note']), stretta: true),
       _Sottotitolo(t.t('dati_fiscali')),
       Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(t.t('dati_fiscali_dal_sito'), style: TextStyle(color: Stile.grigio, fontSize: 12)),
       ),
-      _Riga(t.t('sede_legale'), [
-        fisc['societa_leg'],
-        [fisc['indirizzo_leg'], fisc['indirizzo2_leg']].map(_testo).where((v) => v.isNotEmpty).join(', '),
-        [fisc['cap_leg'], fisc['citta_leg'], fisc['provincia_leg']].map(_testo).where((v) => v.isNotEmpty).join(' · '),
-        fisc['nazione_leg'],
-      ].map(_testo).where((v) => v.isNotEmpty).join('\n')),
+      _Riga(t.t('sede_legale'), _blocco(fisc, 'leg'), stretta: true),
       _Riga(t.t('partita_iva'), _testo(fisc['partita_iva'])),
       _Riga(t.t('codice_fiscale'), _testo(fisc['codice_fiscale'])),
       _Riga('PEC', _testo(fisc['pec']).toLowerCase()),
       _Riga('SDI', _testo(fisc['codice_univoco'])),
       _Riga('EORI', _testo(fisc['codice_eori'])),
       _Sottotitolo(t.t('condizioni')),
-      _Riga(t.t('termini_pagamento'), _testo(cond['termini'])),
-      _Riga(t.t('assicurazione'), _percentuale(cond['assicurazione'], t)),
-      _Riga(t.t('contrassegno'), _percentuale(cond['contrassegno'], t)),
+      _Riga(t.t('termini_pagamento'), _testo(cond['termini']), stretta: true),
+      _Riga(t.t('assicurazione'), _percentuale(cond['assicurazione'], t), stretta: true),
+      _Riga(t.t('contrassegno'), _percentuale(cond['contrassegno'], t), stretta: true),
       _Riga(t.t('supplemento_residenziale'),
-          cond['residenziale'] is num && (cond['residenziale'] as num) > 0 ? SchermataProfiloState.euro(cond['residenziale'] as num, t.lingua) : ''),
-      _Riga(t.t('supplemento_carburante'), cond['carburante'] is num ? '${_numero(cond['carburante'] as num, t)}%' : ''),
+          cond['residenziale'] is num && (cond['residenziale'] as num) > 0 ? SchermataProfiloState.euro(cond['residenziale'] as num, t.lingua) : '',
+          stretta: true),
+      _Riga(t.t('supplemento_carburante'), cond['carburante'] is num ? '${_numero(cond['carburante'] as num, t)}%' : '',
+          stretta: true),
       const SizedBox(height: 28),
 
       // --------------------------------------------------------- rubrica
@@ -444,6 +440,13 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
       ),
     ]);
   }
+
+  /// Societa', indirizzo, «CAP città provincia nazione»: [lato] 'op' (operativo) o 'leg' (sede legale)
+  static String _blocco(Map<String, dynamic> d, String lato) => [
+        _testo(d['societa_$lato']),
+        [d['indirizzo_$lato'], d['indirizzo2_$lato']].map(_testo).where((v) => v.isNotEmpty).join(', '),
+        Api.rigaLuogo(d['cap_$lato'], d['citta_$lato'], d['provincia_$lato'], d['nazione_$lato']),
+      ].where((v) => v.isNotEmpty).join('\n');
 
   static String _fascia(dynamic dalle, dynamic alle) {
     final a = _testo(dalle);
@@ -501,19 +504,25 @@ class _Sottotitolo extends StatelessWidget {
 }
 
 class _Riga extends StatelessWidget {
-  const _Riga(this.etichetta, this.valore);
+  const _Riga(this.etichetta, this.valore, {this.stretta = false});
 
   final String etichetta;
   final String valore;
 
+  /// Nota 373 V23: righe vicine (indirizzi, ritiro, condizioni)
+  final bool stretta;
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 130, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
-          Expanded(child: Text(valore.isEmpty ? '-' : valore, style: const TextStyle(fontSize: 13))),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final alta = stretta ? 1.2 : null;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: stretta ? 0.5 : 3),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 130, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13, height: alta))),
+        Expanded(child: Text(valore.isEmpty ? '-' : valore, style: TextStyle(fontSize: 13, height: alta))),
+      ]),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------- rubrica

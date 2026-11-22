@@ -9,6 +9,7 @@ import '../stile.dart';
 import '../widget/barra.dart';
 import '../testi.dart';
 import '../widget/riquadro_bonifico.dart';
+import 'dettaglio_spedizione.dart';
 import 'entrata.dart';
 import 'pagamento_carta.dart';
 import 'profilo.dart';
@@ -693,7 +694,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
   Widget _movimento(Map<String, dynamic> m, Testi t) {
     final importo = (m['importo'] as num?) ?? 0;
     final annullato = m['annullato'] == true || m['annullato'] == 1 || m['annullato'] == 1.0;
-    return Padding(
+    final riga = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
@@ -711,6 +712,16 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
           if (m['saldo'] != null) Text(_euro(m['saldo'] as num?, t), style: TextStyle(color: Stile.grigio, fontSize: 11)),
         ]),
       ]),
+    );
+    // Nota 373 V23: la riga di una spedizione apre il suo dettaglio; tornando il Credito e' dov'era.
+    // Se la spedizione e' stata eliminata non c'e' niente da aprire.
+    final id = m['spedizione_id'];
+    final esiste = m['spedizione_esiste'];
+    if (id is! num || id <= 0 || esiste == false || esiste == 0) return riga;
+    return InkWell(
+      onTap: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => SchermataDettaglioSpedizione(id: id.toInt()))),
+      child: riga,
     );
   }
 

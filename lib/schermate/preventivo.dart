@@ -533,7 +533,9 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
             _luogo(testi, _partenza, 'p'),
             // Nota 373 V18: inverte partenza e arrivo
             Center(
-              child: OutlinedButton.icon(
+              // nota 373 V23: senza bordo
+              child: TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: Stile.verde),
                 icon: const Icon(Icons.swap_vert),
                 label: Text(testi.t('inverti')),
                 onPressed: _inverti,

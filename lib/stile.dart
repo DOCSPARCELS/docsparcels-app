@@ -117,6 +117,7 @@ class Colori {
     required this.testo,
     required this.cerchioIcona,
     required this.fondoCampi,
+    required this.grigioLeggero,
   });
 
   final Color fondo;
@@ -132,6 +133,9 @@ class Colori {
   /// Fondo dei campi (nota 373 V13): appena diverso dallo sfondo, al posto del riquadro
   final Color fondoCampi;
 
+  /// Scritte che lasciano risaltare quello che hanno accanto, es. «MOS» (nota 373 V23)
+  final Color grigioLeggero;
+
   static const scuro = Colori(
     fondo: Color(0xFF1E1E1E),
     card: Color(0xFF2A2A2A),
@@ -140,7 +144,8 @@ class Colori {
     barra: Color(0xFF141418),
     testo: Colors.white,
     cerchioIcona: Color(0xFF23462D),
-    fondoCampi: Color(0xFF343434),
+    fondoCampi: Color(0xFF272727), // nota 373 V23: piu' vicino al nero
+    grigioLeggero: Color(0xFF777777),
   );
 
   static const chiaro = Colori(
@@ -152,6 +157,7 @@ class Colori {
     testo: Color(0xFF1E1E1E),
     cerchioIcona: Color(0xFFDCEFE0),
     fondoCampi: Color(0xFFE9EBEE),
+    grigioLeggero: Color(0xFFA0A0A0),
   );
 }
 

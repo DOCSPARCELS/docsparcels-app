@@ -13,6 +13,7 @@ import 'entrata.dart';
 import 'pagamento_carta.dart';
 import 'profilo.dart';
 import '../widget/campo_cap.dart';
+import '../widget/pulisci_campi.dart';
 
 /// Nuova spedizione del cliente (nota 367 V2): la stessa richiesta dell'area cliente web.
 /// Un passo alla volta: mittente, destinatario, colli, servizio, ritiro, riepilogo e invio.
@@ -872,30 +873,6 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   Widget _sezione(String pre, _Sezione s) {
     final t = _t;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      // Nota 373 V18: solo l'icona dei due omini, a destra; nel mittente «Pulisci campi»
-      Row(children: [
-        if (pre == 'mitt')
-          TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: Stile.grigio, padding: EdgeInsets.zero),
-            icon: const Icon(Icons.cleaning_services_outlined, size: 18),
-            label: Text(t.t('pulisci_campi')),
-            onPressed: () => setState(() {
-              for (final c in s.campi) {
-                c.clear();
-              }
-              s.codiceRubrica = null;
-              _mancanti = {};
-            }),
-          ),
-        const Spacer(),
-        IconButton(
-          tooltip: t.t('scegli_da_rubrica'),
-          iconSize: 28,
-          icon: const Icon(Icons.people, color: Stile.verde),
-          onPressed: _attesa ? null : () => _scegliDaRubrica(s),
-        ),
-      ]),
-      const SizedBox(height: 4),
       _campo(s.societa, t.t('societa'), '${pre}_societa', sezione: s, maiuscole: TextCapitalization.words),
       _campo(s.contatto, t.t('nome'), '${pre}_contatto', sezione: s, maiuscole: TextCapitalization.words),
       Padding(
@@ -955,6 +932,17 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
           value: s.salvaInRubrica,
           title: Text(t.t('salva_in_rubrica')),
           onChanged: (v) => setState(() => s.salvaInRubrica = v ?? false),
+        ),
+      // Nota 373 V23: solo la scritta, in basso a destra nel mittente
+      if (pre == 'mitt')
+        PulisciCampi(
+          pulisci: () => setState(() {
+            for (final c in s.campi) {
+              c.clear();
+            }
+            s.codiceRubrica = null;
+            _mancanti = {};
+          }),
         ),
     ]);
   }
@@ -1403,9 +1391,24 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                         children: [
-                          Text('${_passo + 1}/$_passi · ${_titoloPasso(_passo)}',
-                              style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
-                          const SizedBox(height: 16),
+                          // Nota 373 V23: il passo sulla stessa riga dei due omini della rubrica
+                          SizedBox(
+                            height: 48,
+                            child: Row(children: [
+                              Expanded(
+                                child: Text('${_passo + 1}/$_passi · ${_titoloPasso(_passo)}',
+                                    style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
+                              ),
+                              if (_passo < 2)
+                                IconButton(
+                                  tooltip: t.t('scegli_da_rubrica'),
+                                  iconSize: 28,
+                                  icon: const Icon(Icons.people, color: Stile.verde),
+                                  onPressed: _attesa ? null : () => _scegliDaRubrica(_passo == 0 ? _mitt : _dest),
+                                ),
+                            ]),
+                          ),
+                          const SizedBox(height: 12),
                           contenuto,
                           if (_errore != null) ...[
                             const SizedBox(height: 16),

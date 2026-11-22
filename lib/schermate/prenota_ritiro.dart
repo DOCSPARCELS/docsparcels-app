@@ -5,8 +5,10 @@ import '../stile.dart';
 import '../testi.dart';
 import '../widget/barra.dart';
 import '../widget/campo_cap.dart';
+import '../widget/pulisci_campi.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
+import 'nuova_spedizione.dart' show SceltaRubrica, SchermataNuovaSpedizione;
 
 /// Prenota ritiro (nota 373 V18): la stessa richiesta della pagina «Nuovo ritiro» del sito
 /// (POST /cliente/api/ritiri). Indirizzo dall'anagrafica del cliente, corriere, giorno,
@@ -70,6 +72,61 @@ class _SchermataPrenotaRitiroState extends State<SchermataPrenotaRitiro> {
   final _punto = TextEditingController();
   final _note = TextEditingController();
   final List<_Collo> _colli = [_Collo()];
+
+  /// Nota 373 V23: rubrica per «Dove ritiriamo», letta alla prima apertura
+  List<Map<String, dynamic>>? _rubrica;
+  static const _campiLuogo = {'contatto', 'indirizzo', 'cap', 'citta', 'provincia', 'telefono', 'email', 'nazione'};
+
+  Map<String, TextEditingController> get _luogo => {
+        'societa': _societa,
+        'contatto': _contatto,
+        'indirizzo': _indirizzo,
+        'cap': _cap,
+        'citta': _citta,
+        'provincia': _provincia,
+        'telefono': _telefono,
+        'email': _email,
+      };
+
+  Future<void> _scegliDaRubrica() async {
+    final t = _t;
+    if (_rubrica == null) {
+      try {
+        _rubrica = await Api.rubrica();
+      } on ErroreApi catch (e) {
+        if (mounted) setState(() => _errore = t.errore(e.codice));
+        return;
+      }
+      if (!mounted) return;
+    }
+    final scelto = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.colori.fondo,
+      shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+      builder: (_) => SceltaRubrica(voci: _rubrica!, testi: t),
+    );
+    if (scelto == null || !mounted) return;
+    final dati = SchermataNuovaSpedizione.campiDaRubrica(scelto);
+    final codice = '${scelto['codice_nazione_op'] ?? ''}'.trim().toUpperCase();
+    setState(() {
+      _luogo.forEach((chiave, campo) => campo.text = '${dati[chiave] ?? ''}'.trim());
+      _email.text = _email.text.toLowerCase();
+      _nazione = _nazioni.where((n) => '${n['codice']}'.toUpperCase() == codice).firstOrNull ?? _nazione;
+      // come in Nuova spedizione: quello che manca al contatto si vede subito in rosso
+      _mancanti = _controlla().intersection(_campiLuogo);
+      _errore = null;
+    });
+  }
+
+  void _pulisci() => setState(() {
+        for (final campo in _luogo.values) {
+          campo.clear();
+        }
+        _mancanti = {};
+        _errore = null;
+      });
 
   Testi get _t => Testi.di(context);
 
@@ -225,9 +282,13 @@ class _SchermataPrenotaRitiroState extends State<SchermataPrenotaRitiro> {
           actions: [ElevatedButton(onPressed: () => Navigator.pop(c), child: Text(t.t('ok')))],
         ),
       );
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+      // Nota 373 V23: si torna da dove si era partiti (home o elenco dei ritiri)
+      if (mounted) Navigator.of(context).pop();
     } on ErroreApi catch (e) {
-      if (mounted) setState(() => _errore = e.messaggio ?? t.errore(e.codice));
+      if (mounted) {
+        setState(() => _errore =
+            e.corpo?['duplicato'] == true ? t.t('ritiro_duplicato') : (e.messaggio ?? t.errore(e.codice)));
+      }
     } finally {
       if (mounted) setState(() => _invio = false);
     }
@@ -378,7 +439,16 @@ class _SchermataPrenotaRitiroState extends State<SchermataPrenotaRitiro> {
                 behavior: HitTestBehavior.translucent,
                 onTap: () => FocusScope.of(context).unfocus(),
                 child: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 32), children: [
-                  _titolo(t.t('indirizzo_ritiro')),
+                  // Nota 373 V23: i due omini della rubrica
+                  Row(children: [
+                    Expanded(child: _titolo(t.t('indirizzo_ritiro'))),
+                    IconButton(
+                      tooltip: t.t('scegli_da_rubrica'),
+                      iconSize: 28,
+                      icon: const Icon(Icons.people, color: Stile.verde),
+                      onPressed: _scegliDaRubrica,
+                    ),
+                  ]),
                   _campo(_societa, t.t('societa'), 'societa', maiuscole: TextCapitalization.words),
                   _campo(_contatto, t.t('nome'), 'contatto', maiuscole: TextCapitalization.words),
                   Padding(
@@ -425,6 +495,7 @@ class _SchermataPrenotaRitiroState extends State<SchermataPrenotaRitiro> {
                   ]),
                   _campo(_telefono, t.t('telefono'), 'telefono', tipo: TextInputType.phone, max: 15),
                   _campo(_email, t.t('email_campo'), 'email', tipo: TextInputType.emailAddress, max: 50),
+                  PulisciCampi(pulisci: _pulisci),
                   _titolo(t.t('corriere_ritiro')),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     for (final v in _vettori)

@@ -23,6 +23,13 @@ void main() {
     expect(find.byType(LogoApp), findsOneWidget);
   });
 
+  test('CAP una volta sola nella riga del luogo', () {
+    expect(Api.rigaLuogo('00185', 'Roma 00185', 'RM', 'Italia'), '00185 Roma RM Italia');
+    expect(Api.rigaLuogo('00185', '00185 Roma', 'RM', 'Italia'), '00185 Roma RM Italia');
+    expect(Api.rigaLuogo('20121', 'Milano', 'MI'), '20121 Milano MI');
+    expect(Api.rigaLuogo('', 'Dubai', '', 'Emirati Arabi Uniti'), 'Dubai Emirati Arabi Uniti');
+  });
+
   test('numero della fattura senza anno', () {
     expect(Api.numeroFattura('399/2026'), '399');
     expect(Api.numeroFattura('NC 20/2026'), 'NC 20');

@@ -182,16 +182,14 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
         titolo: t.t('le_mie_spedizioni'),
         sotto: TabBar(
           controller: _schede,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
+          // nota 373 V23: quattro schede su tutta la larghezza
+          labelPadding: const EdgeInsets.symmetric(horizontal: 3),
           indicatorColor: Stile.verde,
           labelColor: Stile.verde,
           unselectedLabelColor: Stile.grigio,
           tabs: [
-            Tab(text: t.t('filtro_tutte')),
-            Tab(text: t.t('filtro_transito')),
-            Tab(text: t.t('filtro_consegnate')),
-            Tab(text: t.t('filtro_bozze')),
+            for (final chiave in ['filtro_tutte', 'filtro_transito', 'filtro_consegnate', 'filtro_bozze'])
+              Tab(child: FittedBox(fit: BoxFit.scaleDown, child: Text(t.t(chiave)))),
           ],
         ),
       ),

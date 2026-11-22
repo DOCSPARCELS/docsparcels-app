@@ -22,13 +22,13 @@ class LogoApp extends StatelessWidget {
 /// - Tutte le altre (nota 373 V8): titolo della pagina al centro, logo piccolo a destra;
 ///   toccando il logo si torna sempre alla pagina principale.
 PreferredSizeWidget barraApp(BuildContext context,
-    {String? titolo, List<Widget>? azioni, PreferredSizeWidget? sotto, Widget? inizio}) {
+    {String? titolo, String? prefisso, List<Widget>? azioni, PreferredSizeWidget? sotto, Widget? inizio}) {
   if (titolo == null) {
     return AppBar(
-      toolbarHeight: 70,
+      toolbarHeight: 78,
       centerTitle: true,
       leading: inizio,
-      title: const LogoApp(),
+      title: const LogoApp(altezza: 48), // nota 373 V23: piu' grande solo nella home
       actions: azioni,
       bottom: sotto,
     );
@@ -37,7 +37,12 @@ PreferredSizeWidget barraApp(BuildContext context,
     toolbarHeight: 64,
     centerTitle: true,
     leading: inizio,
-    title: Text(titolo,
+    title: Text.rich(
+        TextSpan(children: [
+          // nota 373 V23: es. «MOS» in grigio leggero, cosi' risalta il numero
+          if (prefisso != null) TextSpan(text: '$prefisso ', style: TextStyle(color: context.colori.grigioLeggero)),
+          TextSpan(text: titolo),
+        ]),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: context.colori.testo)),

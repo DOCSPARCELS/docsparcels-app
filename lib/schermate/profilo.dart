@@ -13,6 +13,7 @@ import 'mio_profilo.dart';
 import 'nuova_spedizione.dart';
 import 'pagamenti_fatture.dart';
 import 'prenota_ritiro.dart';
+import 'ritiri.dart';
 import 'preventivo.dart';
 import '../widget/striscia_servizio.dart';
 
@@ -204,6 +205,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         children: [
           for (final (icona, testo, schermata) in voci)
             CardApp(
+              bordo: false, // nota 373 V23
               onTap: () => _apri(schermata),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                 CircleAvatar(
@@ -310,7 +312,11 @@ class _UltimaSpedizione extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
               Expanded(
-                child: Text('MOS ${_mos(riga['mos'] ?? riga['id'])}',
+                child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: 'MOS ', style: TextStyle(color: c.grigioLeggero, fontWeight: FontWeight.w500)),
+                      TextSpan(text: _mos(riga['mos'] ?? riga['id'])),
+                    ]),
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: c.testo)),
               ),
               if (riga['data'] != null) Text('${riga['data']}', style: TextStyle(color: Stile.grigio, fontSize: 13)),
@@ -380,7 +386,9 @@ class _UltimaSpedizione extends StatelessWidget {
 
 /// Riquadro con bordo sottile e angoli a 2 px, nei colori del tema.
 class CardApp extends StatelessWidget {
-  const CardApp({super.key, required this.child, this.onTap, this.padding = const EdgeInsets.all(16)});
+  const CardApp({super.key, required this.child, this.onTap, this.bordo = true, this.padding = const EdgeInsets.all(16)});
+
+  final bool bordo;
 
   final Widget child;
   final VoidCallback? onTap;
@@ -391,14 +399,15 @@ class CardApp extends StatelessWidget {
     final c = context.colori;
     return Material(
       color: c.card,
-      shape: RoundedRectangleBorder(borderRadius: Stile.angoli, side: BorderSide(color: c.bordo)),
+      shape: RoundedRectangleBorder(
+          borderRadius: Stile.angoli, side: bordo ? BorderSide(color: c.bordo) : BorderSide.none),
       clipBehavior: Clip.antiAlias,
       child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
     );
   }
 }
 
-/// Barra in basso: Home, Spedizioni, Fatture e pagamenti, Profilo.
+/// Barra in basso: Home, Spedizioni, Ritiri, Profilo.
 class BarraInBasso extends StatelessWidget {
   const BarraInBasso({super.key, required this.attiva, required this.apri});
 
@@ -416,7 +425,7 @@ class BarraInBasso extends StatelessWidget {
           case 1:
             apri(const SchermataLeMieSpedizioni());
           case 2:
-            apri(const SchermataPrenotaRitiro());
+            apri(const SchermataRitiri());
           case 3:
             apri(const SchermataMioProfilo());
         }
@@ -425,8 +434,8 @@ class BarraInBasso extends StatelessWidget {
         NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: t.t('home')),
         NavigationDestination(icon: const Icon(Icons.public), label: t.t('spedizioni')),
         // nella barra il nome completo andrebbe su due righe: qui la sola prima parola
-        // nota 373 V18: «Ritiro» al posto di Fatture
-        NavigationDestination(icon: const IconaRitiro(size: 28), label: t.t('ritiro')),
+        // nota 373 V23: «Ritiri», apre l'elenco
+        NavigationDestination(icon: const IconaRitiro(size: 28), label: t.t('ritiri')),
         NavigationDestination(icon: const Icon(Icons.person_outline), label: t.t('profilo')),
       ],
     );

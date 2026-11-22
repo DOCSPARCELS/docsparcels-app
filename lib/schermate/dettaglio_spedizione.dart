@@ -272,7 +272,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
   Widget build(BuildContext context) {
     final t = _t;
     return Scaffold(
-      appBar: barraApp(context, titolo: 'MOS ${_mosGruppi(widget.id)}', azioni: [
+      appBar: barraApp(context, prefisso: 'MOS', titolo: _mosGruppi(widget.id), azioni: [
         IconButton(tooltip: t.t('aggiorna'), icon: const Icon(Icons.refresh), onPressed: _attesa ? null : _carica),
       ]),
       body: SafeArea(
@@ -339,8 +339,10 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
           ),
         ],
         const SizedBox(height: 16),
-        _riga(t.t('data_spedizione'), '${s['data'] ?? ''}'),
+        _riga(t.t('data'), '${s['data'] ?? ''}'),
         _rigaServizio(t, s),
+        // nota 373 V23: sempre presente, «-» finche' la spedizione non ha un corriere
+        _riga(t.t('vettore'), '${s['vettore'] ?? ''}'.trim().isEmpty ? '-' : '${s['vettore']}'),
         _riga('AWB', '${s['awb'] ?? ''}'),
         _riga(t.t('colli_titolo'), [
           if (colli.isNotEmpty) '${colli.length}',
@@ -437,22 +439,15 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
   /// Nota 373 V17: servizio in nero (bianco nel tema scuro) con la striscia sfumata del suo colore
   Widget _rigaServizio(Testi t, Map<String, dynamic> s) {
     final nome = '${s['servizio'] ?? ''}'.trim();
-    final vettore = '${s['vettore'] ?? ''}'.trim();
-    if (nome.isEmpty && vettore.isEmpty) return const SizedBox.shrink();
+    if (nome.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         SizedBox(width: 120, child: Text(t.t('servizio'), style: TextStyle(color: Stile.grigio, fontSize: 13))),
-        if (nome.isNotEmpty) ...[
-          StrisciaServizio(colore: StrisciaServizio.daTesto(s['colore_servizio']), larghezza: 30, altezza: 18),
-          const SizedBox(width: 6),
-        ],
+        StrisciaServizio(colore: StrisciaServizio.daTesto(s['colore_servizio']), larghezza: 30, altezza: 18),
+        const SizedBox(width: 6),
         Expanded(
-          child: Text.rich(TextSpan(children: [
-            if (nome.isNotEmpty)
-              TextSpan(text: nome, style: TextStyle(color: context.colori.testo, fontWeight: FontWeight.w600)),
-            if (vettore.isNotEmpty) TextSpan(text: '${nome.isNotEmpty ? ' · ' : ''}$vettore'),
-          ]), style: const TextStyle(fontSize: 13)),
+          child: Text(nome, style: TextStyle(fontSize: 13, color: context.colori.testo, fontWeight: FontWeight.w600)),
         ),
       ]),
     );
@@ -521,7 +516,21 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
       [nome(dati['citta']), nome(dati['nazione'])].where((v) => v.isNotEmpty).join(' · '),
       '${dati['email'] ?? ''}'.trim().toLowerCase(),
     ].where((v) => v.isNotEmpty).join('\n');
-    return _riga(etichetta, righe);
+    if (righe.isEmpty) return const SizedBox.shrink();
+    // Nota 373 V23: lineetta leggerissima alta quanto le righe; il testo resta in colonna con gli altri valori
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 111, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.only(left: 8),
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: context.colori.bordo))),
+            child: Text(righe, style: const TextStyle(fontSize: 13)),
+          ),
+        ),
+      ]),
+    );
   }
 
   Widget _passaggio(Map<String, String> p, bool ultimo) {

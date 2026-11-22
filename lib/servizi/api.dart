@@ -175,6 +175,10 @@ class Api {
     }
   }
 
+  /// Nota 373 V23: i ritiri del cliente, come la pagina «Ritiri» del sito. {ritiri, pagina, pagine}
+  static Future<Map<String, dynamic>> ritiri({int pagina = 1}) async =>
+      ((await _getCorpo('/cliente/api/ritiri?page=$pagina'))['data'] as Map<String, dynamic>?) ?? {};
+
   /// Salva in rubrica un mittente o destinatario scritto a mano.
   /// Nota 373 V18: ritiro chiesto dal cliente (come «Nuovo ritiro» del sito). Ritorna {messaggio, ritiro_id}.
   static Future<Map<String, dynamic>> prenotaRitiro(Map<String, dynamic> dati) async =>
@@ -287,6 +291,23 @@ class Api {
       if (!e && _piccole.contains(m)) return m;
       return m.split('-').map((x) => x.isEmpty ? x : x[0].toUpperCase() + x.substring(1)).join('-');
     }).join(' ');
+  }
+
+  /// Nota 373 V23: «CAP città provincia nazione». Il CAP una volta sola, anche quando nella scheda
+  /// e' scritto pure dentro la citta' (es. cap 00185, citta' «Roma 00185»).
+  static String rigaLuogo(dynamic cap, dynamic citta, [dynamic provincia, dynamic nazione]) {
+    String testo(dynamic v) => v == null ? '' : '$v'.trim();
+    final codice = testo(cap);
+    var luogo = testo(citta);
+    if (codice.contains(RegExp(r'\d'))) {
+      luogo = luogo
+          .split(RegExp(r'\s+'))
+          .where((p) => p.replaceAll(RegExp(r'^[(,]+|[),]+$'), '') != codice)
+          .join(' ');
+    }
+    return [codice, nomeProprio(luogo), testo(provincia).toUpperCase(), nomeProprio(testo(nazione))]
+        .where((v) => v.isNotEmpty)
+        .join(' ');
   }
 
   /// Documenti scaricabili: [{tipo: awb|proforma|allegato|dogana|reso, nome, url}].
