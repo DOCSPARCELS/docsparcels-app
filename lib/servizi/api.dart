@@ -94,6 +94,16 @@ class Api {
     return (dati['utente'] as Map<String, dynamic>?) ?? {};
   }
 
+  /// POST /app/api/password-dimenticata (nota 373 V37): il link per una password nuova.
+  /// Il server risponde allo stesso modo che l'email esista o no.
+  static Future<void> passwordDimenticata(String email, String lingua) async {
+    _risposta(await _manda(() async => http.post(
+          _url('/app/api/password-dimenticata'),
+          headers: await _intestazioni(conChiave: false),
+          body: jsonEncode({'email': email.trim(), 'lingua': lingua}),
+        )));
+  }
+
   /// GET /app/api/io: chi e' collegato.
   static Future<Map<String, dynamic>> io() async =>
       _risposta(await _manda(() async => http.get(_url('/app/api/io'), headers: await _intestazioni())));

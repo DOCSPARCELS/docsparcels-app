@@ -8,6 +8,7 @@ import '../stile.dart';
 import '../testi.dart';
 import '../widget/barra.dart';
 import 'profilo.dart';
+import 'recupero_password.dart';
 import '../widget/scelta_tema.dart';
 import '../widget/scelta_lingua.dart';
 import '../servizi/chiave.dart';
@@ -205,7 +206,15 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(testi.t('entra')),
                   ),
-                  const SizedBox(height: 32),
+                  // Nota 373 V37: stessa procedura della pagina del sito
+                  const SizedBox(height: 8),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: Stile.verde),
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => SchermataRecuperoPassword(email: _login.text))),
+                    child: Text(testi.t('password_dimenticata')),
+                  ),
+                  const SizedBox(height: 24),
                   // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
                   const SceltaTema(),
                   const SizedBox(height: 20),
