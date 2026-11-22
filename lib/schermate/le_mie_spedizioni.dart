@@ -345,10 +345,12 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
       borderRadius: Stile.angoli,
       onTap: () => _apri(r),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
         decoration: BoxDecoration(
             color: context.colori.card, border: Border.all(color: context.colori.bordo), borderRadius: Stile.angoli),
-        child: Column(
+        // Nota 373 V29: la freccina come nelle ultime spedizioni della home
+        child: Row(children: [
+          Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Nota 373 V10: come la card «Ultima spedizione»: MOS e data in evidenza, poi mittente e
@@ -449,7 +451,9 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
               ]),
             ],
           ],
-        ),
+          )),
+          Icon(Icons.chevron_right, color: Stile.grigio),
+        ]),
       ),
     );
   }

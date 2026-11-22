@@ -6,6 +6,7 @@ import '../testi.dart';
 import '../widget/barra.dart';
 import 'entrata.dart';
 import 'prenota_ritiro.dart';
+import 'scheda_ritiro.dart';
 
 /// Ritiri del cliente (nota 373 V23): gli stessi della pagina «Ritiri» del sito, con giorno,
 /// corriere, indirizzo, stato e numero di prenotazione. In fondo il pulsante per un ritiro nuovo.
@@ -125,7 +126,7 @@ class _SchermataRitiriState extends State<SchermataRitiri> {
           itemCount: _righe.length + (_attesa ? 1 : 0),
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (_, i) => i < _righe.length
-              ? _riga(t, _righe[i])
+              ? _riga(t, i)
               : const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator())),
         ),
       ),
@@ -134,22 +135,21 @@ class _SchermataRitiriState extends State<SchermataRitiri> {
 
   static String _testo(dynamic v) => v == null ? '' : '$v'.trim();
 
-  Widget _riga(Testi t, Map<String, dynamic> r) {
+  /// Nota 373 V29: la scheda. L'elenco va dal piu' recente: il primo di una spedizione e' il suo ultimo ritiro.
+  void _apri(int indice) {
+    final r = _righe[indice];
+    final ultimo = !_righe.take(indice).any((x) => x['spedizione_id'] == r['spedizione_id']);
+    Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => SchermataSchedaRitiro(ritiro: r, ultimoDellaSpedizione: ultimo)));
+  }
+
+  Widget _riga(Testi t, int indice) {
+    final r = _righe[indice];
     final c = context.colori;
-    // gli stati del ritiro li traduce l'app (5 lingue); quello del tracciamento arriva gia' scritto
-    final chiave = _testo(r['stato_chiave']);
-    final stato = chiave.isEmpty ? Api.frase(_testo(r['stato'])) : t.t(chiave);
-    final valore = int.tryParse(_testo(r['colore']).replaceAll('#', ''), radix: 16);
-    final colore = valore == null ? Stile.grigio : Color(0xFF000000 | valore);
-    final luogo = [
-      Api.nomeProprio(_testo(r['indirizzo'])),
-      Api.rigaLuogo(r['cap'], r['citta'], r['provincia']),
-    ].where((v) => v.isNotEmpty).join('\n');
+    final stato = testoStatoRitiro(t, r);
+    final luogo = indirizzoRitiro(r);
     final prenotazione = _testo(r['prenotazione']);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: c.card, borderRadius: Stile.angoli),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final dati = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
             child: Text([_testo(r['giorno']), _testo(r['vettore'])].where((v) => v.isNotEmpty).join(' · '),
@@ -163,7 +163,7 @@ class _SchermataRitiriState extends State<SchermataRitiri> {
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: context.temaScuro ? colore : Color.lerp(colore, Colors.black, 0.35))),
+                    color: coloreStatoRitiro(context, r))),
           ),
         ]),
         if (luogo.isNotEmpty) ...[
@@ -180,7 +180,19 @@ class _SchermataRitiriState extends State<SchermataRitiri> {
             style: const TextStyle(fontSize: 13),
           ),
         ],
-      ]),
+    ]);
+    // Nota 373 V29: la freccina come nelle ultime spedizioni della home
+    return Material(
+      color: c.card,
+      borderRadius: Stile.angoli,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _apri(indice),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
+          child: Row(children: [Expanded(child: dati), Icon(Icons.chevron_right, color: Stile.grigio)]),
+        ),
+      ),
     );
   }
 }
