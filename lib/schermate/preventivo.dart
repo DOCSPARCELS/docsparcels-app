@@ -6,6 +6,7 @@ import '../testi.dart';
 import '../widget/barra.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
+import 'nuova_spedizione.dart';
 import 'profilo.dart';
 
 /// Preventivo veloce: partenza, arrivo, documenti o pacco, colli e «Calcola».
@@ -35,6 +36,9 @@ class _Luogo {
   final cap = TextEditingController();
   final citta = TextEditingController();
 
+  /// Contatto scelto dalla rubrica (nota 373 V11): con «Spedisci» passa tutti i suoi dati
+  Map<String, dynamic>? contatto;
+
   void dispose() {
     cap.dispose();
     citta.dispose();
@@ -55,6 +59,10 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
 
   /// Nota 373 V5: dopo «Calcola» la pagina scorre da sola fino alle tariffe
   final _chiaveTariffe = GlobalKey();
+
+  /// Nota 373 V11: rubrica (caricata alla prima apertura) e tariffa toccata, che mostra «Spedisci»
+  List<Map<String, dynamic>>? _rubrica;
+  int? _tariffaScelta;
   Set<String> _mancanti = {};
   String? _errore;
   bool _attesa = false;
@@ -173,10 +181,67 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
     if (_tariffe != null || _errore != null || _mancanti.isNotEmpty) {
       setState(() {
         _tariffe = null;
+        _tariffaScelta = null;
         _errore = null;
         _mancanti = {};
       });
     }
+  }
+
+  Future<void> _dallaRubrica(_Luogo luogo) async {
+    final t = Testi.di(context);
+    if (_rubrica == null) {
+      try {
+        _rubrica = await Api.rubrica();
+      } on ErroreApi catch (e) {
+        await _gestisciErrore(e);
+      }
+      if (!mounted || _rubrica == null) return;
+    }
+    final scelto = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.colori.fondo,
+      shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+      builder: (_) => SceltaRubrica(voci: _rubrica!, testi: t),
+    );
+    if (scelto == null || !mounted) return;
+    setState(() {
+      final codice = '${scelto['codice_nazione_op'] ?? ''}'.toUpperCase();
+      luogo.nazione = _nazioni.where((n) => '${n['codice']}'.toUpperCase() == codice).firstOrNull ?? luogo.nazione;
+      luogo.cap.text = '${scelto['cap_op'] ?? ''}'.trim();
+      luogo.citta.text = '${scelto['citta_op'] ?? ''}'.trim();
+      luogo.contatto = scelto;
+      _mancanti = {};
+    });
+    _cambiato();
+  }
+
+  /// «Spedisci» su una tariffa: Nuova spedizione con i dati del preventivo gia' scritti
+  void _spedisci(Map<String, dynamic> tariffa) {
+    Map<String, dynamic> lato(_Luogo l) => {
+          'codice_nazione': l.nazione?['codice'],
+          'cap': l.cap.text.trim(),
+          'citta': l.citta.text.trim(),
+          'contatto': l.contatto,
+        };
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => SchermataNuovaSpedizione(daPreventivo: {
+              'mitt': lato(_partenza),
+              'dest': lato(_arrivo),
+              'documenti': _tipologia == _tipologiaDocumenti,
+              'colli': [
+                for (final c in _colli)
+                  {
+                    'peso': c.peso.text.trim(),
+                    'lunghezza': c.lunghezza.text.trim(),
+                    'larghezza': c.larghezza.text.trim(),
+                    'altezza': c.altezza.text.trim(),
+                  }
+              ],
+              'servizio_id': tariffa['id'],
+            })));
   }
 
   Future<void> _scegliNazione(_Luogo luogo) async {
@@ -197,9 +262,18 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
             : null,
       );
 
-  Widget _titolo(String testo) => Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 10),
-        child: Text(testo, style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
+  Widget _titolo(String testo, {VoidCallback? rubrica}) => Padding(
+        padding: EdgeInsets.only(top: rubrica == null ? 20 : 8, bottom: rubrica == null ? 10 : 2),
+        child: Row(children: [
+          Expanded(child: Text(testo, style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600))),
+          // Nota 373 V11: come nel gestionale, l'iconcina apre la rubrica
+          if (rubrica != null)
+            IconButton(
+              tooltip: Testi.di(context).t('scegli_da_rubrica'),
+              icon: const Icon(Icons.contacts_outlined, color: Stile.verde),
+              onPressed: rubrica,
+            ),
+        ]),
       );
 
   Widget _luogo(Testi testi, _Luogo luogo, String prefisso) {
@@ -223,7 +297,10 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
               child: TextField(
                 controller: luogo.cap,
                 textInputAction: TextInputAction.next,
-                onChanged: (_) => _cambiato(),
+                onChanged: (_) {
+                  luogo.contatto = null;
+                  _cambiato();
+                },
                 decoration: _decorazione(testi.t('cap'), '${prefisso}_cap'),
               ),
             ),
@@ -233,7 +310,10 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
                 controller: luogo.citta,
                 textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.next,
-                onChanged: (_) => _cambiato(),
+                onChanged: (_) {
+                  luogo.contatto = null;
+                  _cambiato();
+                },
                 decoration: _decorazione(testi.t('citta'), '${prefisso}_citta'),
               ),
             ),
@@ -309,29 +389,52 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
     return Color(0xFF000000 | valore);
   }
 
-  Widget _tariffa(Testi testi, Map<String, dynamic> t) => Container(
+  Widget _tariffa(Testi testi, Map<String, dynamic> t) {
+    final scelta = _tariffaScelta != null && _tariffaScelta == t['id'];
+    return GestureDetector(
+      onTap: () => setState(() => _tariffaScelta = scelta ? null : t['id'] as int?),
+      child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: _coloreServizio(t['colore']), width: 4)),
+          // nota 373 V11: striscia piu' larga
+          border: Border(left: BorderSide(color: _coloreServizio(t['colore']), width: 8)),
           color: context.colori.card,
           borderRadius: Stile.angoli,
         ),
-        child: Row(
-          children: [
-            Expanded(child: Text('${t['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600))),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(SchermataProfiloState.euro((t['totale'] as num?) ?? 0, testi.lingua),
-                    style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
-                if (t['iva_inclusa'] == true)
-                  Text(testi.t('iva_inclusa'), style: const TextStyle(color: Stile.grigio, fontSize: 11)),
-              ],
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(
+            children: [
+              Expanded(child: Text('${t['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600))),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(SchermataProfiloState.euro((t['totale'] as num?) ?? 0, testi.lingua),
+                      style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
+                  if (t['iva_inclusa'] == true)
+                    Text(testi.t('iva_inclusa'), style: const TextStyle(color: Stile.grigio, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+          // Nota 373 V11: toccando la tariffa compare «Spedisci», rosso
+          if (scelta) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Stile.rosso, foregroundColor: Colors.white, minimumSize: const Size(130, 40)),
+                icon: const Icon(Icons.local_shipping_outlined, size: 18),
+                label: Text(testi.t('spedisci')),
+                onPressed: () => _spedisci(t),
+              ),
             ),
           ],
-        ),
-      );
+        ]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -346,9 +449,9 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            _titolo(testi.t('partenza')),
+            _titolo(testi.t('partenza'), rubrica: () => _dallaRubrica(_partenza)),
             _luogo(testi, _partenza, 'p'),
-            _titolo(testi.t('arrivo')),
+            _titolo(testi.t('arrivo'), rubrica: () => _dallaRubrica(_arrivo)),
             _luogo(testi, _arrivo, 'a'),
             const SizedBox(height: 20),
             SegmentedButton<int>(

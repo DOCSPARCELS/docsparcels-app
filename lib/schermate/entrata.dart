@@ -9,6 +9,8 @@ import '../testi.dart';
 import '../widget/barra.dart';
 import 'profilo.dart';
 import '../widget/scelta_tema.dart';
+import '../widget/scelta_lingua.dart';
+import '../servizi/chiave.dart';
 
 /// Schermata di entrata: email (o nome utente) e password.
 class SchermataEntrata extends StatefulWidget {
@@ -26,6 +28,15 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
   String? _errore;
 
   @override
+  void initState() {
+    super.initState();
+    // Nota 373 V11: l'app ricorda con chi si era entrati l'ultima volta
+    ArchivioChiave.ultimoLogin().then((v) {
+      if (mounted && v != null && _login.text.isEmpty) setState(() => _login.text = v);
+    }).catchError((_) {});
+  }
+
+  @override
   void dispose() {
     _login.dispose();
     _password.dispose();
@@ -40,6 +51,9 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
     });
     try {
       await Api.entra(_login.text, _password.text, testi.lingua);
+      try {
+        await ArchivioChiave.salvaLogin(_login.text.trim());
+      } catch (_) {}
       if (!mounted) return;
       await _proponiBiometria(testi);
       if (!mounted) return;
@@ -88,9 +102,11 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
     // Si conferma subito con lo sblocco: cosi' si sa che funziona su questo telefono
     final usa = si == true && await Biometria.sblocca(testi);
     await Biometria.salvaScelta(usa);
+    if (si == true && !usa && Biometria.ultimoErrore != null && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(Biometria.ultimoErrore!, textAlign: TextAlign.center)));
+    }
   }
-
-  static const _bandiere = {'it': '🇮🇹', 'en': '🇬🇧', 'es': '🇪🇸', 'fr': '🇫🇷', 'de': '🇩🇪'};
 
   static const _email = 'info@docsparcels.com';
   static const _telefono = '+39 06 7720 3074';
@@ -193,33 +209,8 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
                   const SceltaTema(),
                   const SizedBox(height: 20),
-                  // Lingua dell'app, anche prima di entrare: tutte e cinque su una riga (nota 373 V9),
-                  // nome piccolo e sotto la bandierina
-                  Row(children: [
-                    for (final l in Testi.lingue)
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            // nota 373 V10: verde solo il pulsante Entra; la lingua scelta e' in grassetto
-                            foregroundColor: testi.lingua == l ? context.colori.testo : Stile.grigio,
-                            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-                            minimumSize: const Size(0, 36),
-                          ),
-                          onPressed: () => LinguaApp.imposta(l),
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(testi.t('lingua_$l'),
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: testi.lingua == l ? FontWeight.w700 : FontWeight.w500)),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(_bandiere[l] ?? '', style: const TextStyle(fontSize: 18)),
-                          ]),
-                        ),
-                      ),
-                  ]),
+                  // Lingua dell'app, anche prima di entrare (uguale al profilo)
+                  const SceltaLingua(scegli: LinguaApp.imposta),
                 ],
               ),
             ),

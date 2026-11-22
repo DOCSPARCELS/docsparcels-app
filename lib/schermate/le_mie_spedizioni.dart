@@ -375,12 +375,32 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Nota 373 V11: striscia col colore del servizio (come nel preventivo) e nome in verde
+                if ('${r['servizio'] ?? ''}'.trim().isNotEmpty) ...[
+                  Container(
+                    width: 6,
+                    height: 16,
+                    margin: const EdgeInsets.only(top: 1, right: 6),
+                    decoration: BoxDecoration(
+                        color: r['colore_servizio'] == null ? Stile.verde : _colore(r['colore_servizio'] as String?),
+                        borderRadius: Stile.angoli),
+                  ),
+                ],
                 Expanded(
-                  child: Text(
-                    [r['servizio'], r['awb']].where((v) => v != null && '$v'.trim().isNotEmpty).join(' · '),
+                  child: Text.rich(
+                    TextSpan(children: [
+                      if ('${r['servizio'] ?? ''}'.trim().isNotEmpty)
+                        TextSpan(
+                            text: '${r['servizio']}'.trim(),
+                            style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
+                      if ('${r['awb'] ?? ''}'.trim().isNotEmpty)
+                        TextSpan(
+                            text: '${'${r['servizio'] ?? ''}'.trim().isNotEmpty ? ' · ' : ''}${r['awb']}',
+                            style: const TextStyle(color: Stile.grigio)),
+                    ]),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Stile.grigio, fontSize: 12),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
                 // Nota 373 V9: lo stato a destra; se e' lungo va su due righe

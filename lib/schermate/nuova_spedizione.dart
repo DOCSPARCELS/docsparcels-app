@@ -17,10 +17,26 @@ import 'profilo.dart';
 /// Un passo alla volta: mittente, destinatario, colli, servizio, ritiro, riepilogo e invio.
 /// La bozza si salva sul server a ogni passo, quindi si ritrova anche sul sito.
 class SchermataNuovaSpedizione extends StatefulWidget {
-  const SchermataNuovaSpedizione({super.key, this.bozzaId});
+  const SchermataNuovaSpedizione({super.key, this.bozzaId, this.daPreventivo});
 
   /// Bozza da riprendere (da «Le mie spedizioni», nota 368); null = spedizione nuova
   final int? bozzaId;
+
+  /// Nota 373 V11: dati del Preventivo veloce («Spedisci»): {mitt, dest} ognuno con
+  /// codice_nazione, cap, citta e l'eventuale contatto della rubrica; documenti, colli, servizio_id.
+  final Map<String, dynamic>? daPreventivo;
+
+  /// Contatto della rubrica -> campi di mittente o destinatario
+  static Map<String, dynamic> campiDaRubrica(Map<String, dynamic> c) => {
+        'societa': c['societa_op'],
+        'contatto': c['contatto'],
+        'indirizzo': c['indirizzo_op'],
+        'cap': c['cap_op'],
+        'citta': c['citta_op'],
+        'provincia': c['provincia_op'],
+        'telefono': c['telefono_op'],
+        'email': c['email_op'],
+      };
 
   @override
   State<SchermataNuovaSpedizione> createState() => _SchermataNuovaSpedizioneState();
@@ -160,6 +176,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       _dest.nazione = _nazione('IT');
       _dataSpedizione = '${_dati['prima_data_spedizione'] ?? ''}';
       _colli.first.imballaggio = _imballaggioPredefinito();
+      if (widget.daPreventivo != null) _compilaDaPreventivo(widget.daPreventivo!);
       if (widget.bozzaId != null) _compilaDaBozza(await Api.datiBozza(widget.bozzaId!));
       if (!mounted) return;
       setState(() => _attesa = false);
@@ -225,6 +242,63 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
     }
     _puntoRitiro.text = v('ritiro_punto');
     _noteRitiro.text = v('ritiro_istruzioni_note');
+  }
+
+  /// Servizio scelto nel preventivo: si seleziona da solo quando arrivano le tariffe
+  int? _servizioVoluto;
+
+  /// Nota 373 V11: «Spedisci» dal Preventivo veloce. Partenza e arrivo (dalla rubrica, con tutti i
+  /// dati, oppure solo nazione, CAP e citta'), documenti o merce, colli e servizio.
+  void _compilaDaPreventivo(Map<String, dynamic> p) {
+    String v(dynamic x) => x == null ? '' : '$x'.trim();
+    void lato(_Sezione s, Map? dati, {required bool mittente}) {
+      if (dati == null) return;
+      final contatto = (dati['contatto'] as Map?)?.cast<String, dynamic>();
+      if (contatto != null) {
+        s.compila(SchermataNuovaSpedizione.campiDaRubrica(contatto), _nazione(v(contatto['codice_nazione_op'])));
+        s.codiceRubrica = contatto['tipo'] == 'contatto' ? v(contatto['codice']) : null;
+        return;
+      }
+      final codice = v(dati['codice_nazione']);
+      final cap = v(dati['cap']);
+      final citta = v(dati['citta']);
+      if (cap.isEmpty && citta.isEmpty && (mittente || codice.isEmpty)) return;
+      final cambia = !mittente ||
+          codice.toUpperCase() != v(s.nazione?['codice']).toUpperCase() ||
+          cap != s.cap.text.trim() ||
+          citta.toLowerCase() != s.citta.text.trim().toLowerCase();
+      if (!cambia) return;
+      if (mittente) {
+        // un'altra partenza: l'indirizzo del cliente non vale piu'
+        s.indirizzo.clear();
+        s.provincia.clear();
+        s.codiceRubrica = null;
+      }
+      s.nazione = _nazione(codice) ?? s.nazione;
+      s.cap.text = cap;
+      s.citta.text = citta;
+    }
+
+    lato(_mitt, p['mitt'] as Map?, mittente: true);
+    lato(_dest, p['dest'] as Map?, mittente: false);
+    _documenti = p['documenti'] == true;
+    final colli = ((p['colli'] as List?) ?? []).cast<Map>();
+    if (colli.isNotEmpty) {
+      for (final c in _colli) {
+        c.dispose();
+      }
+      _colli
+        ..clear()
+        ..addAll(colli.map((c) {
+          final collo = _Collo()..imballaggio = _imballaggioPredefinito();
+          collo.peso.text = v(c['peso']);
+          collo.lunghezza.text = v(c['lunghezza']);
+          collo.larghezza.text = v(c['larghezza']);
+          collo.altezza.text = v(c['altezza']);
+          return collo;
+        }));
+    }
+    _servizioVoluto = p['servizio_id'] as int?;
   }
 
   Map<String, dynamic>? _nazione(String codice) =>
@@ -493,6 +567,10 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       });
       _servizi = servizi;
       if (servizi.isEmpty) _errore = _t.t('errore_nessuna_tariffa');
+      if (_servizioVoluto != null) {
+        _servizio = servizi.where((x) => x['id'] == _servizioVoluto).firstOrNull ?? _servizio;
+        _servizioVoluto = null;
+      }
     } on ErroreApi catch (e) {
       await _gestisciErrore(e);
     }
@@ -638,20 +716,11 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       useSafeArea: true,
       backgroundColor: context.colori.fondo,
       shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
-      builder: (_) => _SceltaRubrica(voci: _rubrica!, testi: t),
+      builder: (_) => SceltaRubrica(voci: _rubrica!, testi: t),
     );
     if (scelto == null) return;
     setState(() {
-      s.compila({
-        'societa': scelto['societa_op'],
-        'contatto': scelto['contatto'],
-        'indirizzo': scelto['indirizzo_op'],
-        'cap': scelto['cap_op'],
-        'citta': scelto['citta_op'],
-        'provincia': scelto['provincia_op'],
-        'telefono': scelto['telefono_op'],
-        'email': scelto['email_op'],
-      }, _nazione('${scelto['codice_nazione_op'] ?? ''}'));
+      s.compila(SchermataNuovaSpedizione.campiDaRubrica(scelto), _nazione('${scelto['codice_nazione_op'] ?? ''}'));
       s.codiceRubrica = scelto['tipo'] == 'contatto' ? '${scelto['codice'] ?? ''}' : null;
       s.salvaInRubrica = false;
       _mancanti = {};
@@ -1286,17 +1355,17 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
 }
 
 /// Rubrica del cliente con ricerca (contatti e indirizzi gia' usati).
-class _SceltaRubrica extends StatefulWidget {
-  const _SceltaRubrica({required this.voci, required this.testi});
+class SceltaRubrica extends StatefulWidget {
+  const SceltaRubrica({super.key, required this.voci, required this.testi});
 
   final List<Map<String, dynamic>> voci;
   final Testi testi;
 
   @override
-  State<_SceltaRubrica> createState() => _SceltaRubricaState();
+  State<SceltaRubrica> createState() => SceltaRubricaStato();
 }
 
-class _SceltaRubricaState extends State<_SceltaRubrica> {
+class SceltaRubricaStato extends State<SceltaRubrica> {
   String _cerca = '';
 
   @override

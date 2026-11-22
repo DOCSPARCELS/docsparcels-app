@@ -11,6 +11,8 @@ import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
 import 'profilo.dart';
 import '../widget/scelta_tema.dart';
+import '../widget/scelta_lingua.dart';
+import '../servizi/biometria.dart';
 
 /// Il mio profilo (nota 372): account, la mia scheda, rubrica, lingua. Come «Il mio profilo» e
 /// «La mia scheda» del sito; i dati fiscali nell'app sono solo da vedere.
@@ -413,21 +415,15 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
 
       // --------------------------------------------------------- lingua
       _Titolo(t.t('lingua')),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final l in Testi.lingue)
-          ChoiceChip(
-            label: Text(t.t('lingua_$l')),
-            selected: t.lingua == l,
-            selectedColor: Stile.verde.withValues(alpha: 0.25),
-            shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
-            onSelected: (_) => _lingua(l),
-          ),
-      ]),
+      // Nota 373 V11: uguali all'accesso
+      SceltaLingua(scegli: _lingua),
       const SizedBox(height: 28),
 
       // --------------------------------------------------------- aspetto (nota 373 V3)
       _Titolo(t.t('aspetto')),
       const SceltaTema(),
+      const SizedBox(height: 12),
+      const _InterruttoreBiometria(),
       const SizedBox(height: 36),
       OutlinedButton.icon(
         style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
@@ -812,6 +808,69 @@ class _SchermataContattoState extends State<SchermataContatto> {
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// Nota 373 V11: Face ID / impronta si attivano anche da qui, non solo alla prima entrata.
+/// Se il telefono non li offre si dice perche'.
+class _InterruttoreBiometria extends StatefulWidget {
+  const _InterruttoreBiometria();
+
+  @override
+  State<_InterruttoreBiometria> createState() => _InterruttoreBiometriaState();
+}
+
+class _InterruttoreBiometriaState extends State<_InterruttoreBiometria> {
+  bool _attivo = false;
+  bool _pronto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Biometria.scelta().then((v) {
+      if (mounted) {
+        setState(() {
+          _attivo = v == 'si';
+          _pronto = true;
+        });
+      }
+    }).catchError((_) {
+      if (mounted) setState(() => _pronto = true);
+    });
+  }
+
+  Future<void> _cambia(bool attiva) async {
+    final t = Testi.di(context);
+    void avviso(String testo) =>
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo, textAlign: TextAlign.center)));
+    if (!attiva) {
+      await Biometria.salvaScelta(false);
+      if (mounted) setState(() => _attivo = false);
+      return;
+    }
+    if (!await Biometria.disponibile()) {
+      if (mounted) avviso(t.t('biometria_non_disponibile'));
+      return;
+    }
+    if (!mounted) return;
+    final ok = await Biometria.sblocca(t);
+    await Biometria.salvaScelta(ok);
+    if (!mounted) return;
+    setState(() => _attivo = ok);
+    if (!ok && Biometria.ultimoErrore != null) avviso(Biometria.ultimoErrore!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Testi.di(context);
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      activeThumbColor: Stile.verde,
+      secondary: const Icon(Icons.fingerprint, color: Stile.verde),
+      title: Text(t.t('accesso_biometrico')),
+      value: _attivo,
+      onChanged: _pronto ? _cambia : null,
     );
   }
 }

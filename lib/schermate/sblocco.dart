@@ -17,21 +17,59 @@ class SchermataSblocco extends StatefulWidget {
   State<SchermataSblocco> createState() => _SchermataSbloccoState();
 }
 
-class _SchermataSbloccoState extends State<SchermataSblocco> {
+class _SchermataSbloccoState extends State<SchermataSblocco> with WidgetsBindingObserver {
   bool _attesa = false;
+  bool _provato = false;
+  bool _riprovato = false;
+  String? _errore;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _sblocca());
+    WidgetsBinding.instance.addObserver(this);
+    // Nota 373 V11: su iPhone Face ID chiesto mentre l'app si sta ancora aprendo non parte;
+    // si chiede appena l'app e' attiva (o al ritorno in primo piano)
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (mounted && !_provato) _sblocca();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState stato) {
+    if (stato == AppLifecycleState.resumed && !_provato && mounted) _sblocca();
   }
 
   Future<void> _sblocca() async {
     if (_attesa) return;
-    setState(() => _attesa = true);
-    final ok = await Biometria.sblocca(Testi.di(context));
+    _provato = true;
+    setState(() {
+      _attesa = true;
+      _errore = null;
+    });
+    var ok = await Biometria.sblocca(Testi.di(context));
     if (!mounted) return;
-    setState(() => _attesa = false);
+    // Nota 373 V11: all'apertura su iPhone il sistema puo' non essere ancora pronto: un secondo tentativo
+    final errore = Biometria.ultimoErrore ?? '';
+    if (!ok && !_riprovato && (errore.contains('systemCanceled') || errore.contains('uiUnavailable'))) {
+      _riprovato = true;
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      ok = await Biometria.sblocca(Testi.di(context));
+      if (!mounted) return;
+    }
+    setState(() {
+      _attesa = false;
+      _errore = Biometria.ultimoErrore;
+    });
     if (ok) {
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SchermataProfilo()));
     }
@@ -61,6 +99,10 @@ class _SchermataSbloccoState extends State<SchermataSblocco> {
                   const Icon(Icons.fingerprint, size: 72, color: Stile.verde),
                   const SizedBox(height: 32),
                   ElevatedButton(onPressed: _attesa ? null : _sblocca, child: Text(testi.t('sblocca'))),
+                  if (_errore != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_errore!, textAlign: TextAlign.center, style: const TextStyle(color: Stile.rosso, fontSize: 13)),
+                  ],
                   const SizedBox(height: 12),
                   TextButton(onPressed: _conPassword, child: Text(testi.t('usa_password'))),
                 ],

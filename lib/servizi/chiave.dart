@@ -14,4 +14,10 @@ class ArchivioChiave {
   static Future<void> salva(String chiave) => _archivio.write(key: _nome, value: chiave);
 
   static Future<void> cancella() => _archivio.delete(key: _nome);
+
+  /// Nota 373 V11: l'ultima email (o nome utente) con cui si e' entrati, per riproporla
+  /// all'accesso; resta anche dopo l'uscita.
+  static Future<String?> ultimoLogin() => _archivio.read(key: 'ultimo_login');
+
+  static Future<void> salvaLogin(String login) => _archivio.write(key: 'ultimo_login', value: login);
 }

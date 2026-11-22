@@ -343,7 +343,7 @@ class BarraInBasso extends StatelessWidget {
       },
       destinations: [
         NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: t.t('home')),
-        NavigationDestination(icon: const Icon(Icons.local_shipping_outlined), label: t.t('spedizioni')),
+        NavigationDestination(icon: const Icon(Icons.public), label: t.t('spedizioni')),
         // nella barra il nome completo andrebbe su due righe: qui la sola prima parola
         NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), label: t.t('fatture')),
         NavigationDestination(icon: const Icon(Icons.person_outline), label: t.t('profilo')),
