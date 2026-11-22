@@ -113,7 +113,8 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text("Doc's & Parcels®", style: TextStyle(fontWeight: FontWeight.w600, color: colore)),
+          // ® un po' staccato da «Parcels» (nota 373 V9)
+          Text("Doc's & Parcels\u2009®", style: TextStyle(fontWeight: FontWeight.w600, color: colore)),
           const SizedBox(height: 2),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             TextButton(
@@ -154,9 +155,6 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   Text(testi.t('ciao_accesso'),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: context.colori.testo)),
-                  const SizedBox(height: 6),
-                  Text(testi.t('entra_con_account'),
-                      textAlign: TextAlign.center, style: const TextStyle(color: Stile.grigio)),
                   const SizedBox(height: 28),
                   TextField(
                     controller: _login,
@@ -195,22 +193,30 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
                   const SceltaTema(),
                   const SizedBox(height: 20),
-                  // Lingua dell'app, anche prima di entrare: nome e sotto la bandierina
-                  Wrap(alignment: WrapAlignment.center, spacing: 2, children: [
+                  // Lingua dell'app, anche prima di entrare: tutte e cinque su una riga (nota 373 V9),
+                  // nome piccolo e sotto la bandierina
+                  Row(children: [
                     for (final l in Testi.lingue)
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: testi.lingua == l ? Stile.verde : Stile.grigio,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          minimumSize: const Size(0, 36),
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: testi.lingua == l ? Stile.verde : Stile.grigio,
+                            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+                            minimumSize: const Size(0, 36),
+                          ),
+                          onPressed: () => LinguaApp.imposta(l),
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(testi.t('lingua_$l'),
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: testi.lingua == l ? FontWeight.w700 : FontWeight.w500)),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(_bandiere[l] ?? '', style: const TextStyle(fontSize: 18)),
+                          ]),
                         ),
-                        onPressed: () => LinguaApp.imposta(l),
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Text(testi.t('lingua_$l'),
-                              style: TextStyle(fontWeight: testi.lingua == l ? FontWeight.w700 : FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text(_bandiere[l] ?? '', style: const TextStyle(fontSize: 20)),
-                        ]),
                       ),
                   ]),
                 ],

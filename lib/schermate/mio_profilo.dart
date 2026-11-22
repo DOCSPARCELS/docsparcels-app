@@ -436,10 +436,11 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
         onPressed: _esci,
       ),
       const SizedBox(height: 12),
-      OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Stile.rosso,
-          side: const BorderSide(color: Stile.rosso),
+      // Nota 373 V9: rosso pieno con il testo bianco
+      ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Stile.rosso,
+          foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(44),
         ),
         onPressed: _eliminaAccount,

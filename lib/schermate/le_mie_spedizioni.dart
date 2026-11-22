@@ -339,15 +339,8 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
               Text(arrivo, style: const TextStyle(color: Stile.grigio, fontSize: 13)),
             const SizedBox(height: 6),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (!lavorazione) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
-                    child: Text('${r['stato'] ?? ''}', style: TextStyle(color: colore, fontSize: 12)),
-                  ),
-                  const SizedBox(width: 8),
-                ],
                 Expanded(
                   child: Text(
                     [r['servizio'], r['awb']].where((v) => v != null && '$v'.trim().isNotEmpty).join(' · '),
@@ -356,6 +349,22 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                     style: const TextStyle(color: Stile.grigio, fontSize: 12),
                   ),
                 ),
+                // Nota 373 V9: lo stato a destra; se e' lungo va su due righe
+                if (!lavorazione && '${r['stato'] ?? ''}'.trim().isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.45),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
+                      child: Text('${r['stato']}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(color: colore, fontSize: 12)),
+                    ),
+                  ),
+                ],
                 if (lavorazione) ...[
                   const SizedBox(width: 8),
                   Text(t.t('in_lavorazione'), style: const TextStyle(color: _arancio, fontSize: 12, fontWeight: FontWeight.w600)),

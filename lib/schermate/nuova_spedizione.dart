@@ -960,13 +960,46 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
     ]);
   }
 
-  Widget _rigaPunto(String etichetta, Map<String, dynamic>? punto, VoidCallback scegli) => Padding(
+  /// Senza point: il pulsante per sceglierlo. Con il point scelto (nota 373 V9): bannerino viola
+  /// leggerissimo, come gli altri bannerini; toccandolo si cambia.
+  Widget _rigaPunto(String etichetta, Map<String, dynamic>? punto, VoidCallback scegli) {
+    if (punto == null) {
+      return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: _pulsanteBordo(
-            punto == null ? etichetta : '$etichetta: ${punto['name'] ?? ''}, ${punto['address'] ?? ''}',
-            _attesa ? null : scegli,
-            icona: Icons.place),
+        child: _pulsanteBordo(etichetta, _attesa ? null : scegli, icona: Icons.place),
       );
+    }
+    const viola = Color(0xFF8E7CC3);
+    final luogo = [punto['address'], [punto['zip_code'], punto['city']].where((v) => v != null && '$v'.isNotEmpty).join(' ')]
+        .where((v) => v != null && '$v'.trim().isNotEmpty)
+        .join(', ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: _attesa ? null : scegli,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: viola.withValues(alpha: 0.10),
+            border: const Border(left: BorderSide(color: viola, width: 4)),
+            borderRadius: Stile.angoli,
+          ),
+          child: Row(children: [
+            const Icon(Icons.place, color: viola, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                Text('${punto['name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                if (luogo.isNotEmpty) Text(luogo, style: const TextStyle(fontSize: 12)),
+              ]),
+            ),
+            const Icon(Icons.edit_outlined, color: viola, size: 18),
+          ]),
+        ),
+      ),
+    );
+  }
 
   Future<void> _scegliData(void Function(String) imposta, String? attuale) async {
     final primo = DateTime.tryParse(_dataSpedizione ?? '') ?? DateTime.now();
@@ -1344,7 +1377,11 @@ class _SceltaPunto extends StatelessWidget {
             title: Text('${p['name'] ?? ''}'),
             subtitle: Text('${p['address'] ?? ''}, ${p['zip_code'] ?? ''} ${p['city'] ?? ''}',
                 style: const TextStyle(color: Stile.grigio, fontSize: 12)),
-            trailing: diff == null ? null : Text('+ ${euro(diff)}', style: const TextStyle(color: Stile.verde)),
+            // Nota 373 V9: «€ 1,20 in più», piu' grande e in grassetto (in meno non succede)
+            trailing: diff == null || diff <= 0
+                ? null
+                : Text('${euro(diff)} ${testi.t('in_piu')}',
+                    style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w700, fontSize: 15)),
             onTap: () => Navigator.pop(context, p),
           );
         },
