@@ -168,7 +168,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       Text('${t.t('ciao')} $nome', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: c.testo)),
       const SizedBox(height: 4),
       Text.rich(TextSpan(children: [
-        TextSpan(text: '${t.t('codice_cliente')} ', style: const TextStyle(color: Stile.grigio)),
+        TextSpan(text: '${t.t('codice_cliente')} ', style: TextStyle(color: Stile.grigio)),
         TextSpan(text: '${_io?['codice'] ?? '-'}', style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
       ])),
       const SizedBox(height: 20),
@@ -208,7 +208,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
           // nota 373 V8: apre direttamente la scheda Credito
           onTap: () => _apri(const SchermataPagamentiFatture(scheda: 1)),
           child: Row(children: [
-            Expanded(child: Text(t.t('saldo'), style: const TextStyle(color: Stile.grigio))),
+            Expanded(child: Text(t.t('saldo'), style: TextStyle(color: Stile.grigio))),
             Text(euro((_credito?['saldo'] as num?) ?? 0, t.lingua),
                 style: const TextStyle(color: Stile.verde, fontSize: 22, fontWeight: FontWeight.w700)),
           ]),
@@ -250,7 +250,7 @@ class _UltimaSpedizione extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text('MOS ${_mos(riga['mos'] ?? riga['id'])}',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: c.testo)),
-            if (data != null) Text('$data', style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+            if (data != null) Text('$data', style: TextStyle(color: Stile.grigio, fontSize: 13)),
           ]),
         ]),
         const SizedBox(height: 10),
@@ -279,12 +279,12 @@ class _UltimaSpedizione extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 100, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+        SizedBox(width: 100, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (chi.isNotEmpty)
               Text(chi, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colori.testo)),
-            if (dove.isNotEmpty) Text(dove, style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+            if (dove.isNotEmpty) Text(dove, style: TextStyle(color: Stile.grigio, fontSize: 13)),
           ]),
         ),
       ]),

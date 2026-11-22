@@ -913,11 +913,11 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
           decoration: BoxDecoration(border: Border.all(color: Stile.grigio), borderRadius: Stile.angoli),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
-              Expanded(child: Text('${t.t('collo')} ${i + 1}', style: const TextStyle(color: Stile.grigio))),
+              Expanded(child: Text('${t.t('collo')} ${i + 1}', style: TextStyle(color: Stile.grigio))),
               if (_colli.length > 1)
                 IconButton(
                   tooltip: t.t('togli_collo'),
-                  icon: const Icon(Icons.close, color: Stile.grigio, size: 20),
+                  icon: Icon(Icons.close, color: Stile.grigio, size: 20),
                   onPressed: () => setState(() => _colli.removeAt(i).dispose()),
                 )
               else
@@ -1058,7 +1058,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
             const SizedBox(width: 8),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 12)),
                 Text('${punto['name'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 if (luogo.isNotEmpty) Text(luogo, style: const TextStyle(fontSize: 12)),
               ]),
@@ -1125,7 +1125,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         Text('${t.t('porta_al_punto')} ${_puntoMittente?['name'] ?? ''}, ${_puntoMittente?['address'] ?? ''}',
             style: const TextStyle(fontSize: 14)),
       if (!_portaAlPunto) ...[
-      Text(t.t('vuoi_ritiro'), style: const TextStyle(color: Stile.grigio)),
+      Text(t.t('vuoi_ritiro'), style: TextStyle(color: Stile.grigio)),
       Row(children: [
         Expanded(
           child: RadioListTile<bool>(
@@ -1152,7 +1152,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         ),
       ]),
       if (_ritiro == false)
-        Text(t.t('senza_ritiro_testo'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+        Text(t.t('senza_ritiro_testo'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
       if (_ritiro == true) ...[
         const SizedBox(height: 8),
         InkWell(
@@ -1188,7 +1188,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   Widget _riga(String etichetta, String valore, {bool forte = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 120, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+          SizedBox(width: 120, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
           Expanded(
               child: Text(valore,
                   style: TextStyle(
@@ -1221,7 +1221,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       _riga(t.t('totale'), _euro(totale), forte: true),
       if (_servePagamento) ...[
         const SizedBox(height: 16),
-        Text(t.t('come_paghi'), style: const TextStyle(color: Stile.grigio)),
+        Text(t.t('come_paghi'), style: TextStyle(color: Stile.grigio)),
         if (p['prepagato'] == true)
           RadioListTile<String>(
             contentPadding: EdgeInsets.zero,
@@ -1393,7 +1393,7 @@ class SceltaRubricaStato extends State<SceltaRubrica> {
           ),
           Expanded(
             child: elenco.isEmpty
-                ? Center(child: Text(widget.testi.t('rubrica_vuota'), style: const TextStyle(color: Stile.grigio)))
+                ? Center(child: Text(widget.testi.t('rubrica_vuota'), style: TextStyle(color: Stile.grigio)))
                 : ListView.builder(
                     itemCount: elenco.length,
                     itemBuilder: (_, i) {
@@ -1404,7 +1404,7 @@ class SceltaRubricaStato extends State<SceltaRubrica> {
                         title: Text('${v['societa_op'] ?? v['contatto'] ?? ''}'),
                         subtitle: Text(
                             '${v['indirizzo_op'] ?? ''}, ${v['cap_op'] ?? ''} ${v['citta_op'] ?? ''} (${v['codice_nazione_op'] ?? ''})',
-                            style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                            style: TextStyle(color: Stile.grigio, fontSize: 12)),
                         onTap: () => Navigator.pop(context, v),
                       );
                     },
@@ -1445,7 +1445,7 @@ class _SceltaPunto extends StatelessWidget {
             leading: const Icon(Icons.place, color: Stile.verde),
             title: Text('${p['name'] ?? ''}'),
             subtitle: Text('${p['address'] ?? ''}, ${p['zip_code'] ?? ''} ${p['city'] ?? ''}',
-                style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                style: TextStyle(color: Stile.grigio, fontSize: 12)),
             // Nota 373 V9: «€ 1,20 in più», piu' grande e in grassetto (in meno non succede)
             trailing: diff == null || diff <= 0
                 ? null

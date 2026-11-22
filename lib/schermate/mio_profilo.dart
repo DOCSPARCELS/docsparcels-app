@@ -136,7 +136,7 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
               if (i < 2) const SizedBox(height: 12),
             ],
             const SizedBox(height: 8),
-            Text(t.t('password_regola'), style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+            Text(t.t('password_regola'), style: TextStyle(color: Stile.grigio, fontSize: 12)),
           ]),
         ),
         actions: [_dueBottoni(c, t.t('annulla'), t.t('salva'))],
@@ -328,7 +328,7 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${_testo(a['nome'])} ${_testo(a['cognome'])}'.trim(),
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            Text(_testo(a['email']), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+            Text(_testo(a['email']), style: TextStyle(color: Stile.grigio, fontSize: 13)),
           ]),
         ),
         IconButton(tooltip: t.t('modifica'), icon: const Icon(Icons.edit_outlined, color: Stile.verde), onPressed: _modificaAccount),
@@ -380,7 +380,7 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
       _Sottotitolo(t.t('dati_fiscali')),
       Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: Text(t.t('dati_fiscali_dal_sito'), style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+        child: Text(t.t('dati_fiscali_dal_sito'), style: TextStyle(color: Stile.grigio, fontSize: 12)),
       ),
       _Riga(t.t('sede_legale'), [
         fisc['societa_leg'],
@@ -510,7 +510,7 @@ class _Riga extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 130, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+          SizedBox(width: 130, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
           Expanded(child: Text(valore.isEmpty ? '-' : valore, style: const TextStyle(fontSize: 13))),
         ]),
       );
@@ -592,7 +592,7 @@ class _SchermataRubricaState extends State<SchermataRubrica> {
             child: _attesa
                 ? const Center(child: CircularProgressIndicator())
                 : elenco.isEmpty
-                    ? Center(child: Text(t.t('rubrica_vuota'), style: const TextStyle(color: Stile.grigio)))
+                    ? Center(child: Text(t.t('rubrica_vuota'), style: TextStyle(color: Stile.grigio)))
                     : RefreshIndicator(
                         onRefresh: _carica,
                         child: ListView.separated(
@@ -608,9 +608,9 @@ class _SchermataRubricaState extends State<SchermataRubrica> {
                                 [Api.nomeProprio(_testo(c['contatto'])), Api.nomeProprio(_testo(c['citta_op'])), _testo(c['codice_nazione_op'])]
                                     .where((v) => v.isNotEmpty)
                                     .join(' · '),
-                                style: const TextStyle(color: Stile.grigio, fontSize: 12),
+                                style: TextStyle(color: Stile.grigio, fontSize: 12),
                               ),
-                              trailing: const Icon(Icons.chevron_right, color: Stile.grigio),
+                              trailing: Icon(Icons.chevron_right, color: Stile.grigio),
                               onTap: () => _apri(contatto: c),
                             );
                           },

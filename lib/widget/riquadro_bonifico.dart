@@ -34,7 +34,7 @@ class RiquadroBonifico {
               ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                title: Text(r[0], style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                title: Text(r[0], style: TextStyle(color: Stile.grigio, fontSize: 12)),
                 subtitle: Text(r[1], style: TextStyle(color: context.colori.testo, fontSize: 14)),
                 trailing: IconButton(
                   tooltip: t.t('copia'),

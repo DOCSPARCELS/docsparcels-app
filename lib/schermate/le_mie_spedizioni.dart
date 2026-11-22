@@ -265,7 +265,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                 Padding(
                   padding: const EdgeInsets.all(32),
                   child: Text(t.t('nessuna_spedizione'), textAlign: TextAlign.center,
-                      style: const TextStyle(color: Stile.grigio)),
+                      style: TextStyle(color: Stile.grigio)),
                 ),
               ]),
             );
@@ -289,7 +289,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                 child: Center(
                   child: _attesa
                       ? const CircularProgressIndicator()
-                      : Text('${_righe.length} / $_totale', style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                      : Text('${_righe.length} / $_totale', style: TextStyle(color: Stile.grigio, fontSize: 12)),
                 ),
               );
             }
@@ -316,7 +316,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 100, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+        SizedBox(width: 100, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (chi.isNotEmpty)
@@ -324,7 +324,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colori.testo)),
-            if (dove.isNotEmpty) Text(dove, style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+            if (dove.isNotEmpty) Text(dove, style: TextStyle(color: Stile.grigio, fontSize: 13)),
           ]),
         ),
       ]),
@@ -359,7 +359,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                     Text('MOS ${_mos(r['mos'] ?? r['id'])}',
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: context.colori.testo)),
                     if ('${r['data'] ?? ''}'.isNotEmpty)
-                      Text('${r['data']}', style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+                      Text('${r['data']}', style: TextStyle(color: Stile.grigio, fontSize: 13)),
                   ]),
                 ),
                 if (totale != null)
@@ -396,7 +396,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                       if ('${r['awb'] ?? ''}'.trim().isNotEmpty)
                         TextSpan(
                             text: '${'${r['servizio'] ?? ''}'.trim().isNotEmpty ? ' · ' : ''}${r['awb']}',
-                            style: const TextStyle(color: Stile.grigio)),
+                            style: TextStyle(color: Stile.grigio)),
                     ]),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

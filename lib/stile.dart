@@ -9,7 +9,12 @@ import 'package:flutter/material.dart';
 class Stile {
   static const Color verdePulsanti = Color(0xFF1A6B3C);
   static const Color verde = Color(0xFF4CAF50);
-  static const Color grigio = Color(0xFF878787);
+  /// Testi secondari. Nota 373 V14: nel tema chiaro un grigio scuro ben leggibile sul bianco,
+  /// nel tema scuro com'era. [temaScuro] lo aggiorna l'app a ogni cambio di tema (main.dart).
+  static bool temaScuro = false;
+  static const Color grigioChiaro = Color(0xFF5C5C5C);
+  static const Color grigioScuro = Color(0xFF878787);
+  static Color get grigio => temaScuro ? grigioScuro : grigioChiaro;
   static const Color rosso = Color(0xFFD10001);
 
   /// Icone dei PDF (nota 373 V8)
@@ -61,15 +66,15 @@ class Stile {
         surfaceTintColor: Colors.transparent,
         indicatorColor: verde.withValues(alpha: 0.18),
         iconTheme: WidgetStateProperty.resolveWith(
-            (s) => IconThemeData(color: s.contains(WidgetState.selected) ? verde : grigio)),
+            (s) => IconThemeData(color: s.contains(WidgetState.selected) ? verde : (scuro ? grigioScuro : grigioChiaro))),
         labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
             fontFamily: 'Raleway',
             fontSize: 12,
             fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
-            color: s.contains(WidgetState.selected) ? verde : grigio)),
+            color: s.contains(WidgetState.selected) ? verde : (scuro ? grigioScuro : grigioChiaro))),
       ),
       dividerColor: c.bordo,
-      // Nota 373 V13: campi senza riquadro, con un fondo grigio leggerissimo; il verde solo mentre si scrive.
+      // Nota 373 V13: campi senza riquadro, con un fondo (scuro ? grigioScuro : grigioChiaro) leggerissimo; il verde solo mentre si scrive.
       // I campi mancanti restano col bordo rosso (lo mettono le schermate).
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

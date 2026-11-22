@@ -341,11 +341,11 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         children: [
           Row(
             children: [
-              Expanded(child: Text('${testi.t('collo')} ${i + 1}', style: const TextStyle(color: Stile.grigio))),
+              Expanded(child: Text('${testi.t('collo')} ${i + 1}', style: TextStyle(color: Stile.grigio))),
               if (_colli.length > 1)
                 IconButton(
                   tooltip: testi.t('togli_collo'),
-                  icon: const Icon(Icons.close, color: Stile.grigio, size: 20),
+                  icon: Icon(Icons.close, color: Stile.grigio, size: 20),
                   onPressed: () {
                     setState(() {
                       _colli.removeAt(i).dispose();
@@ -412,7 +412,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
                   Text(SchermataProfiloState.euro((t['totale'] as num?) ?? 0, testi.lingua),
                       style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
                   if (t['iva_inclusa'] == true)
-                    Text(testi.t('iva_inclusa'), style: const TextStyle(color: Stile.grigio, fontSize: 11)),
+                    Text(testi.t('iva_inclusa'), style: TextStyle(color: Stile.grigio, fontSize: 11)),
                 ],
               ),
             ],

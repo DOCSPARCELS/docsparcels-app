@@ -139,7 +139,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
             child: Text(t.t('invia_etichetta_testo'), textAlign: TextAlign.center,
-                style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+                style: TextStyle(color: Stile.grigio, fontSize: 13)),
           ),
           ListTile(
             leading: const Icon(Icons.chat_outlined, color: Stile.verde),
@@ -347,7 +347,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(t.t('costo_spedizione'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+              Text(t.t('costo_spedizione'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
               const SizedBox(width: 10),
               Text(SchermataProfiloState.euro(totale, t.lingua),
                   style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
@@ -380,7 +380,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         if (_passaggi.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(t.t('nessun_passaggio'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+            child: Text(t.t('nessun_passaggio'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
           ),
         for (var i = 0; i < _passaggi.length; i++) _passaggio(_passaggi[i], i == 0),
         if (!widget.vecchia) ...[
@@ -389,7 +389,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
           if (_documenti.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(t.t('nessun_documento'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+              child: Text(t.t('nessun_documento'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
             ),
           for (final d in _documenti)
             Padding(
@@ -431,7 +431,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 120, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+          SizedBox(width: 120, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
           Expanded(child: Text(valore, style: const TextStyle(fontSize: 13))),
         ],
       ),
@@ -468,8 +468,8 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
               children: [
                 Text(p['testo'] ?? '', style: TextStyle(fontSize: 13, color: ultimo ? Stile.verde : null)),
                 if ((p['luogo'] ?? '').isNotEmpty)
-                  Text(p['luogo']!, style: const TextStyle(color: Stile.grigio, fontSize: 12)),
-                if (quando.isNotEmpty) Text(quando, style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                  Text(p['luogo']!, style: TextStyle(color: Stile.grigio, fontSize: 12)),
+                if (quando.isNotEmpty) Text(quando, style: TextStyle(color: Stile.grigio, fontSize: 12)),
               ],
             ),
           ),

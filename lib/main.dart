@@ -53,6 +53,11 @@ class AppDocsParcels extends StatelessWidget {
           theme: Stile.tema(scuro: false),
           darkTheme: Stile.tema(scuro: true),
           themeMode: tema,
+          // Nota 373 V14: Stile.grigio segue il tema davvero attivo (anche con «Automatico»)
+          builder: (contesto, figlio) {
+            Stile.temaScuro = Theme.of(contesto).brightness == Brightness.dark;
+            return figlio ?? const SizedBox.shrink();
+          },
           locale: lingua,
           supportedLocales: const [Locale('it'), Locale('en', 'GB'), Locale('es'), Locale('fr'), Locale('de')],
           // Telefono in inglese (anche americano): inglese britannico, date giorno-mese-anno (nota 373 V6)

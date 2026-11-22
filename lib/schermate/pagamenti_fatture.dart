@@ -47,7 +47,7 @@ Future<bool> pagaCon(BuildContext context, List<String> metodi,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                child: Text(t.t('come_paghi'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+                child: Text(t.t('come_paghi'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
               ),
               for (final m in metodi)
                 ListTile(
@@ -323,7 +323,7 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
             : _righe.isEmpty
                 ? (_attesa
                     ? const Center(child: CircularProgressIndicator())
-                    : Center(child: Text(t.t('nessuna_fattura'), style: const TextStyle(color: Stile.grigio))))
+                    : Center(child: Text(t.t('nessuna_fattura'), style: TextStyle(color: Stile.grigio))))
                 : RefreshIndicator(
                     onRefresh: ricarica,
                     child: NotificationListener<ScrollNotification>(
@@ -363,7 +363,7 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                                       style: const TextStyle(fontWeight: FontWeight.w600)),
                                   Text(
                                       '${_data(f['data'])}${f['scadenza'] != null && f['stato'] != 'pagata' ? ' · ${t.t('scadenza')} ${_data(f['scadenza'])}' : ''}',
-                                      style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+                                      style: TextStyle(color: Stile.grigio, fontSize: 12)),
                                 ]),
                               ),
                               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -388,7 +388,7 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                                 ),
                               IconButton(
                                 visualDensity: VisualDensity.compact,
-                                icon: const Icon(Icons.chevron_right, color: Stile.grigio),
+                                icon: Icon(Icons.chevron_right, color: Stile.grigio),
                                 onPressed: apriDettaglio,
                               ),
                             ]),
@@ -677,7 +677,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
           width: 64,
-          child: Text(_data(m['data_movimento'] ?? m['creato_il']), style: const TextStyle(color: Stile.grigio, fontSize: 12)),
+          child: Text(_data(m['data_movimento'] ?? m['creato_il']), style: TextStyle(color: Stile.grigio, fontSize: 12)),
         ),
         Expanded(
           child: Text(_descrizione(m, t), style: TextStyle(fontSize: 13, color: annullato ? Stile.grigio : null)),
@@ -687,7 +687,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
             '${importo < 0 ? '−' : ''}${_euro(importo.abs(), t)}',
             style: TextStyle(fontSize: 13, color: importo > 0 ? Stile.verde : null),
           ),
-          if (m['saldo'] != null) Text(_euro(m['saldo'] as num?, t), style: const TextStyle(color: Stile.grigio, fontSize: 11)),
+          if (m['saldo'] != null) Text(_euro(m['saldo'] as num?, t), style: TextStyle(color: Stile.grigio, fontSize: 11)),
         ]),
       ]),
     );
@@ -704,7 +704,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(t.t('saldo_non_attivo'), textAlign: TextAlign.center, style: const TextStyle(color: Stile.grigio)),
+          child: Text(t.t('saldo_non_attivo'), textAlign: TextAlign.center, style: TextStyle(color: Stile.grigio)),
         ),
       );
     }
@@ -717,7 +717,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
       child: ListView(padding: const EdgeInsets.all(16), children: [
         _Riquadro(
           child: Row(children: [
-            Expanded(child: Text(t.t('saldo'), style: const TextStyle(color: Stile.grigio))),
+            Expanded(child: Text(t.t('saldo'), style: TextStyle(color: Stile.grigio))),
             Text(_euro(c['saldo'] as num?, t),
                 style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 18)),
           ]),
@@ -730,7 +730,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
             const SizedBox(width: 8),
             Expanded(
               child: Text.rich(TextSpan(children: [
-                TextSpan(text: '${t.t('soglia_avviso')}: ', style: const TextStyle(color: Stile.grigio)),
+                TextSpan(text: '${t.t('soglia_avviso')}: ', style: TextStyle(color: Stile.grigio)),
                 TextSpan(text: _euro(c['soglia'] as num?, t)),
               ])),
             ),
@@ -749,7 +749,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
         ),
         const SizedBox(height: 8),
         if (elenco.isEmpty)
-          Text(t.t('nessun_movimento'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+          Text(t.t('nessun_movimento'), style: TextStyle(color: Stile.grigio, fontSize: 13)),
         for (final m in elenco) _movimento(m, t),
       ]),
     );
@@ -807,7 +807,7 @@ class _Riga extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 120, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+        SizedBox(width: 120, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
         Expanded(child: Text(valore, style: const TextStyle(fontSize: 13))),
       ]),
     );
