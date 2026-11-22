@@ -17,30 +17,41 @@ class LogoApp extends StatelessWidget {
       );
 }
 
-/// Barra in alto di tutte le schermate: logo sempre centrato, sotto il nome della pagina.
+/// Barra in alto.
+/// - Home (senza [titolo]): logo al centro.
+/// - Tutte le altre (nota 373 V8): titolo della pagina al centro, logo piccolo a destra;
+///   toccando il logo si torna sempre alla pagina principale.
 PreferredSizeWidget barraApp(BuildContext context,
     {String? titolo, List<Widget>? azioni, PreferredSizeWidget? sotto, Widget? inizio}) {
+  if (titolo == null) {
+    return AppBar(
+      toolbarHeight: 70,
+      centerTitle: true,
+      leading: inizio,
+      title: const LogoApp(),
+      actions: azioni,
+      bottom: sotto,
+    );
+  }
   return AppBar(
-    toolbarHeight: titolo == null ? 70 : 90,
+    toolbarHeight: 64,
     centerTitle: true,
     leading: inizio,
-    title: Column(mainAxisSize: MainAxisSize.min, children: [
-      // Nota 373 V6: toccando il logo si torna alla pagina principale, da qualsiasi schermata
-      GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
-        child: const LogoApp(),
-      ),
-      if (titolo != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(titolo,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.colori.testo)),
+    title: Text(titolo,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: context.colori.testo)),
+    actions: [
+      ...?azioni,
+      Padding(
+        padding: const EdgeInsets.only(right: 12, left: 4),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+          child: const LogoApp(altezza: 24),
         ),
-    ]),
-    actions: azioni,
+      ),
+    ],
     bottom: sotto,
   );
 }

@@ -17,7 +17,10 @@ import 'profilo.dart';
 /// Si paga come sul sito: carta nella pagina myPOS dentro l'app, bonifico con IBAN e
 /// causale da copiare, credito per le fatture se basta.
 class SchermataPagamentiFatture extends StatefulWidget {
-  const SchermataPagamentiFatture({super.key});
+  const SchermataPagamentiFatture({super.key, this.scheda = 0});
+
+  /// 0 = Fatture, 1 = Credito (dalla card «Credito disponibile» della home, nota 373 V8)
+  final int scheda;
 
   @override
   State<SchermataPagamentiFatture> createState() => _SchermataPagamentiFattureState();
@@ -132,13 +135,13 @@ String _statoFattura(Map<String, dynamic> f, Testi t) => f['nota_credito'] == tr
 
 class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> with SingleTickerProviderStateMixin {
   // Nota 373 V5: niente piu' scheda «Da pagare»; le spedizioni da pagare stanno nelle Bozze
-  late final TabController _schede = TabController(length: 2, vsync: this);
+  late final TabController _schede = TabController(length: 2, vsync: this, initialIndex: widget.scheda);
   final _chiaveFatture = GlobalKey<_FattureState>();
   final _chiaveCredito = GlobalKey<_CreditoState>();
 
   /// Schede viste prima: la freccia indietro ci torna, dalla prima si esce
   final List<int> _storia = [];
-  int _ultima = 0;
+  late int _ultima = widget.scheda;
 
   @override
   void initState() {
@@ -181,7 +184,8 @@ class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> w
       child: Scaffold(
         appBar: barraApp(
           context,
-          titolo: t.t('pagamenti_fatture'),
+          // il titolo segue la scheda aperta (nota 373 V8)
+          titolo: _schede.index == 1 ? t.t('credito') : t.t('pagamenti_fatture'),
           sotto: TabBar(
             controller: _schede,
             indicatorColor: Stile.verde,
@@ -373,7 +377,7 @@ class _FattureState extends State<_Fatture> with AutomaticKeepAliveClientMixin {
                                   visualDensity: VisualDensity.compact,
                                   icon: _pdfAperto == f['id']
                                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                      : const Icon(Icons.picture_as_pdf_outlined, color: Stile.verde),
+                                      : const Icon(Icons.picture_as_pdf_outlined, color: Stile.rossoLeggero),
                                   onPressed: _pdfAperto != null
                                       ? null
                                       : () async {
@@ -515,7 +519,7 @@ class _SchermataFatturaState extends State<SchermataFattura> {
                           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Expanded(
                               child: Text(
-                                  '${r['descrizione'] ?? ''}${(r['spedizioni'] ?? 0) is num && (r['spedizioni'] as num) > 0 ? ' (${r['spedizioni']})' : ''}',
+                                  '${r['descrizione'] ?? ''}${r['spedizioni'] is num && (r['spedizioni'] as num) > 0 ? ' (${r['spedizioni']})' : ''}',
                                   style: const TextStyle(fontSize: 13)),
                             ),
                             Text(_euro(r['importo'] as num?, t), style: const TextStyle(fontSize: 13)),
@@ -634,7 +638,7 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
 
   Future<void> _soglia() async {
     final t = Testi.di(context);
-    final valore = await _chiediImporto(t.t('soglia_credito'), t.t('soglia_credito'),
+    final valore = await _chiediImporto(t.t('notifica_soglia'), t.t('soglia_credito'),
         iniziale: (_c?['soglia'] as num?)?.toDouble());
     if (!mounted || valore == null || valore < 0) return;
     try {
@@ -719,9 +723,15 @@ class _CreditoState extends State<_Credito> with AutomaticKeepAliveClientMixin {
         _Riquadro(
           onTap: _soglia,
           child: Row(children: [
-            Expanded(child: Text(t.t('soglia_credito'), style: const TextStyle(color: Stile.grigio))),
-            Text(_euro(c['soglia'] as num?, t)),
+            // Nota 373 V8: «Soglia di avviso: € …» con la campanellina
+            const Icon(Icons.notifications_none, size: 20, color: Stile.verde),
             const SizedBox(width: 8),
+            Expanded(
+              child: Text.rich(TextSpan(children: [
+                TextSpan(text: '${t.t('soglia_avviso')}: ', style: const TextStyle(color: Stile.grigio)),
+                TextSpan(text: _euro(c['soglia'] as num?, t)),
+              ])),
+            ),
             const Icon(Icons.edit_outlined, size: 18, color: Stile.verde),
           ]),
         ),

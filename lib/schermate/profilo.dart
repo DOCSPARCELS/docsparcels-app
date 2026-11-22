@@ -26,6 +26,7 @@ class SchermataProfilo extends StatefulWidget {
 class SchermataProfiloState extends State<SchermataProfilo> {
   Map<String, dynamic>? _io;
   Map<String, dynamic>? _credito;
+  Map<String, dynamic>? _riepilogo;
   Map<String, dynamic>? _ultima;
   String? _errore;
   bool _attesa = true;
@@ -50,11 +51,22 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         credito = {'attivo': false};
       }
       Map<String, dynamic>? ultima;
+      Map<String, dynamic>? riepilogo;
       try {
         final r = await Api.leMieSpedizioni();
         final righe = ((r['spedizioni'] as List?) ?? []).cast<Map<String, dynamic>>();
-        ultima = righe.isEmpty ? null : righe.first;
-      } on ErroreApi {
+        // le bozze non sono spedizioni partite: si prende la prima vera (nota 373 V8)
+        ultima = righe.where((x) => !const {'bozza', 'da_completare'}.contains('${x['tipo']}')).firstOrNull;
+        final id = ultima?['id'] as int?;
+        if (id != null) {
+          try {
+            riepilogo = await Api.spedizione(id, vecchia: '${ultima!['tipo']}' == 'vecchia');
+          } on ErroreApi catch (e) {
+            if (e.codice == 'chiave_non_valida') rethrow;
+          }
+        }
+      } on ErroreApi catch (e) {
+        if (e.codice == 'chiave_non_valida') rethrow;
         ultima = null;
       }
       if (!mounted) return;
@@ -62,6 +74,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         _io = io;
         _credito = credito;
         _ultima = ultima;
+        _riepilogo = riepilogo;
       });
       // Notifiche sul telefono: permesso e registrazione (non blocca la schermata)
       Notifiche.attiva(Testi.di(context).lingua);
@@ -192,7 +205,8 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       if (prepagato) ...[
         const SizedBox(height: 12),
         CardApp(
-          onTap: () => _apri(const SchermataPagamentiFatture()),
+          // nota 373 V8: apre direttamente la scheda Credito
+          onTap: () => _apri(const SchermataPagamentiFatture(scheda: 1)),
           child: Row(children: [
             Expanded(child: Text(t.t('saldo'), style: const TextStyle(color: Stile.grigio))),
             Text(euro((_credito?['saldo'] as num?) ?? 0, t.lingua),
@@ -202,39 +216,76 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       ],
       if (_ultima != null) ...[
         const SizedBox(height: 12),
-        _UltimaSpedizione(riga: _ultima!, apri: _apri),
+        _UltimaSpedizione(riga: _ultima!, riepilogo: _riepilogo, apri: _apri),
       ],
     ]);
   }
 }
 
+/// Nota 373 V8: in alto «Ultima spedizione» e, a destra, MOS e data; sotto mittente e
+/// destinatario con nome, CAP, citta' e nazione; in basso a destra «Apri».
 class _UltimaSpedizione extends StatelessWidget {
-  const _UltimaSpedizione({required this.riga, required this.apri});
+  const _UltimaSpedizione({required this.riga, required this.riepilogo, required this.apri});
 
   final Map<String, dynamic> riga;
+  final Map<String, dynamic>? riepilogo;
   final Future<void> Function(Widget) apri;
 
   @override
   Widget build(BuildContext context) {
     final t = Testi.di(context);
-    final colore = _colore(riga['colore'] as String?);
+    final c = context.colori;
     final id = riga['id'] as int?;
     final tipo = '${riga['tipo']}';
-    final apribile = id != null && tipo != 'bozza' && tipo != 'da_completare';
+    final mitt = riepilogo?['mitt'] as Map?;
+    final dest = riepilogo?['dest'] as Map? ??
+        {'societa': riga['destinatario'], 'citta': riga['dest_citta'], 'nazione': riga['dest_codice_nazione']};
+    final data = riga['data'] ?? riepilogo?['data'];
     return CardApp(
-      onTap: apribile ? () => apri(SchermataDettaglioSpedizione(id: id, vecchia: tipo == 'vecchia')) : null,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(t.t('ultima_spedizione'), style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        Text('MOS ${_mos(riga['mos'] ?? riga['id'])}${riga['data'] != null ? ' · ${riga['data']}' : ''}',
-            style: TextStyle(fontWeight: FontWeight.w600, color: context.colori.testo)),
-        if ('${riga['destinatario'] ?? ''}'.trim().isNotEmpty)
-          Text(Api.nomeProprio('${riga['destinatario']}'.trim()), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Text(t.t('ultima_spedizione'), style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('MOS ${_mos(riga['mos'] ?? riga['id'])}',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: c.testo)),
+            if (data != null) Text('$data', style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+          ]),
+        ]),
+        const SizedBox(height: 10),
+        if (mitt != null) _lato(context, t.t('mittente'), mitt),
+        _lato(context, t.t('destinatario'), dest),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
-          child: Text('${riga['stato'] ?? ''}', style: TextStyle(color: colore, fontSize: 13)),
+        Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(
+            height: 38,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(minimumSize: const Size(96, 38)),
+              onPressed: id == null ? null : () => apri(SchermataDettaglioSpedizione(id: id, vecchia: tipo == 'vecchia')),
+              child: Text(t.t('apri')),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _lato(BuildContext context, String etichetta, Map dati) {
+    String nome(dynamic v) => Api.nomeProprio(v == null ? '' : '$v'.trim());
+    final chi = nome(dati['societa']).isNotEmpty ? nome(dati['societa']) : nome(dati['contatto']);
+    final dove = [nome(dati['citta']), nome(dati['nazione'])].where((v) => v.isNotEmpty).join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 100, child: Text(etichetta, style: const TextStyle(color: Stile.grigio, fontSize: 13))),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (chi.isNotEmpty)
+              Text(chi, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colori.testo)),
+            if (dove.isNotEmpty) Text(dove, style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+          ]),
         ),
       ]),
     );
@@ -244,13 +295,6 @@ class _UltimaSpedizione extends StatelessWidget {
   static String _mos(dynamic v) {
     final s = '$v';
     return s.length == 7 ? '${s.substring(0, 3)} ${s.substring(3)}' : s;
-  }
-
-  static Color _colore(String? esadecimale) {
-    final testo = (esadecimale ?? '').replaceAll('#', '').trim();
-    final valore = int.tryParse(testo, radix: 16);
-    if (testo.length != 6 || valore == null) return Stile.grigio;
-    return Color(0xFF000000 | valore);
   }
 }
 

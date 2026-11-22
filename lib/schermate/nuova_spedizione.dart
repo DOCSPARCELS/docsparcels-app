@@ -242,6 +242,21 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         orElse: () => lista.first)['id'] as int?;
   }
 
+  /// Nota 373 V8: «Envelope» (A4, id 1) mette da solo 0,5 kg e 29 × 25 × 2 cm; «Busta» (id 2) azzera
+  void _misureImballaggio(_Collo c, int? imballaggio) {
+    String n(double v) => _t.lingua == 'en' ? '$v'.replaceAll(RegExp(r'\.0$'), '') : '$v'.replaceAll(RegExp(r'\.0$'), '').replaceAll('.', ',');
+    if (imballaggio == 1) {
+      c.peso.text = n(0.5);
+      c.lunghezza.text = '29';
+      c.larghezza.text = '25';
+      c.altezza.text = '2';
+    } else if (imballaggio == 2) {
+      for (final campo in [c.peso, c.lunghezza, c.larghezza, c.altezza]) {
+        campo.clear();
+      }
+    }
+  }
+
   int? _tipologia(String tipo) => ((_dati['tipologie'] as List?) ?? [])
       .cast<Map<String, dynamic>>()
       .where((t) => t['tipo_spedizione'] == tipo)
@@ -808,10 +823,16 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
           ButtonSegment(value: false, label: Text(t.t('merce'))),
         ],
         selected: {_documenti},
+        // Nota 373 V8: cambiando Documenti/Merce si azzerano imballaggio, peso e misure
         onSelectionChanged: (s) => setState(() {
           _documenti = s.first;
+          // l'avviso di prima (es. dogana per la merce) non vale piu'
+          _errore = null;
           for (final c in _colli) {
-            c.imballaggio = _imballaggioPredefinito();
+            c.imballaggio = null;
+            for (final campo in [c.peso, c.lunghezza, c.larghezza, c.altezza]) {
+              campo.clear();
+            }
           }
         }),
       ),
@@ -838,6 +859,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
               child: Column(children: [
                 if (_imballaggi.isNotEmpty) ...[
                   DropdownButtonFormField<int>(
+                    // la chiave cambia col valore: l'azzeramento da Documenti/Merce si vede subito
+                    key: ValueKey('imballaggio_${i}_${_colli[i].imballaggio}'),
                     initialValue: _colli[i].imballaggio,
                     isDense: true,
                     decoration: _decorazione(t.t('imballaggio'), 'imballaggio_$i'),
@@ -845,7 +868,10 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
                       for (final im in _imballaggi)
                         DropdownMenuItem(value: im['id'] as int, child: Text('${im['nome']}')),
                     ],
-                    onChanged: (v) => setState(() => _colli[i].imballaggio = v),
+                    onChanged: (v) => setState(() {
+                      _colli[i].imballaggio = v;
+                      _misureImballaggio(_colli[i], v);
+                    }),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -892,7 +918,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
           ),
         ),
       ]),
-      if (_fuoriUe)
+      if (_fuoriUe && _errore != t.t('fuori_ue_dal_sito'))
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(t.t('fuori_ue_dal_sito'), textAlign: TextAlign.center, style: const TextStyle(color: Stile.rosso)),

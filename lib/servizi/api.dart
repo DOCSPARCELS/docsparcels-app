@@ -282,9 +282,10 @@ class Api {
 
   /// Chi paga manda l'etichetta al mittente (nota 368 V3). canale 'email': {messaggio};
   /// canale 'whatsapp': {testo, link, whatsapp} con il link firmato all'etichetta (7 giorni).
-  static Future<Map<String, dynamic>> etichettaAlMittente(int id, String canale, {String? email}) async =>
+  static Future<Map<String, dynamic>> etichettaAlMittente(int id, String canale, {String? email, String? telefono}) async =>
       ((await _postCorpo('/cliente/api/spedizione/$id/etichetta_al_mittente',
-              {'canale': canale, if (email != null) 'email': email}, tempo: const Duration(seconds: 60)))['data']
+              {'canale': canale, if (email != null) 'email': email, if (telefono != null) 'telefono': telefono},
+              tempo: const Duration(seconds: 60)))['data']
           as Map<String, dynamic>?) ??
       {};
 

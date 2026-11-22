@@ -11,6 +11,9 @@ class Stile {
   static const Color verde = Color(0xFF4CAF50);
   static const Color grigio = Color(0xFF878787);
   static const Color rosso = Color(0xFFD10001);
+
+  /// Icone dei PDF (nota 373 V8)
+  static const Color rossoLeggero = Color(0xFFE57373);
   static const BorderRadius angoli = BorderRadius.all(Radius.circular(2));
 
   /// Fondo del tema scuro (lo usano ancora le pagine sempre scure, come il pagamento myPOS)

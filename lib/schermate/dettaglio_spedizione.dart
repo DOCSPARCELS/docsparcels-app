@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../servizi/api.dart';
 import '../stile.dart';
@@ -125,8 +126,10 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     }
   }
 
-  /// Nota 368 V3: chi paga manda l'etichetta al mittente, per email o con la condivisione del telefono.
-  Future<void> _etichettaAlMittente() async {
+  /// Nota 373 V8: «Invia etichetta» per chiunque veda la spedizione (se l'etichetta c'e').
+  /// Si sceglie WhatsApp o email; numero ed email sono quelli del mittente, modificabili.
+  /// Stesse funzioni della nota 368 (link all'etichetta che non scade).
+  Future<void> _inviaEtichetta() async {
     final t = _t;
     final scelta = await showModalBottomSheet<String>(
       context: context,
@@ -135,68 +138,70 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-            child: Text(t.t('etichetta_mittente_testo'), textAlign: TextAlign.center,
+            child: Text(t.t('invia_etichetta_testo'), textAlign: TextAlign.center,
                 style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.chat_outlined, color: Stile.verde),
+            title: Text(t.t('whatsapp')),
+            onTap: () => Navigator.pop(c, 'whatsapp'),
           ),
           ListTile(
             leading: const Icon(Icons.email_outlined, color: Stile.verde),
             title: Text(t.t('invia_per_email')),
             onTap: () => Navigator.pop(c, 'email'),
           ),
-          ListTile(
-            leading: const Icon(Icons.share_outlined, color: Stile.verde),
-            title: Text(t.t('condividi_whatsapp')),
-            onTap: () => Navigator.pop(c, 'whatsapp'),
-          ),
           const SizedBox(height: 8),
         ]),
       ),
     );
     if (!mounted || scelta == null) return;
-    if (scelta == 'email') {
-      await _etichettaPerEmail();
-    } else {
-      await _etichettaCondivisa();
-    }
-  }
-
-  Future<void> _etichettaPerEmail() async {
-    final t = _t;
     final mitt = (_sped?['mitt'] as Map?) ?? {};
-    final campo = TextEditingController(text: '${mitt['email'] ?? ''}'.trim().toLowerCase());
-    final email = await showDialog<String>(
-      context: context,
-      builder: (c) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
-        title: Text(t.t('invia_etichetta_mittente'), textAlign: TextAlign.center),
-        content: TextField(
-          controller: campo,
-          keyboardType: TextInputType.emailAddress,
-          autofocus: campo.text.isEmpty,
-          decoration: InputDecoration(labelText: t.t('email_mittente')),
-        ),
-        actions: [
-          Row(children: [
-            Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: Text(t.t('annulla')))),
-            const SizedBox(width: 12),
-            Expanded(
-                child: ElevatedButton(
-                    onPressed: () => Navigator.pop(c, campo.text.trim().toLowerCase()), child: Text(t.t('invia')))),
-          ]),
-        ],
-      ),
+    final perEmail = scelta == 'email';
+    final iniziale = perEmail
+        ? '${mitt['email'] ?? ''}'.trim().toLowerCase()
+        : (_sped?['whatsapp_mittente'] != null ? '+${_sped!['whatsapp_mittente']}' : '${mitt['telefono'] ?? ''}'.trim());
+    final valore = await _chiediRecapito(
+      titolo: t.t('invia_etichetta'),
+      etichetta: perEmail ? t.t('email_mittente') : t.t('numero_whatsapp'),
+      iniziale: iniziale,
+      tastiera: perEmail ? TextInputType.emailAddress : TextInputType.phone,
+      pulsante: perEmail ? t.t('invia') : t.t('apri_whatsapp'),
     );
-    // il campo si libera solo a finestra chiusa del tutto (durante l'animazione di uscita e' ancora in uso)
-    Future.delayed(const Duration(seconds: 1), campo.dispose);
-    if (!mounted || email == null) return;
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      _avviso(t.t('email_non_valida'));
+    if (!mounted || valore == null) return;
+    if (perEmail) {
+      final email = valore.toLowerCase();
+      if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+        _avviso(t.t('email_non_valida'));
+        return;
+      }
+      setState(() => _scaricando = 'etichetta');
+      try {
+        final r = await Api.etichettaAlMittente(widget.id, 'email', email: email);
+        if (mounted) _avviso('${r['messaggio'] ?? t.t('etichetta_inviata')}');
+      } on ErroreApi catch (e) {
+        if (mounted) _avviso(e.messaggio ?? t.errore(e.codice));
+      } finally {
+        if (mounted) setState(() => _scaricando = null);
+      }
       return;
     }
     setState(() => _scaricando = 'etichetta');
     try {
-      final r = await Api.etichettaAlMittente(widget.id, 'email', email: email);
-      if (mounted) _avviso('${r['messaggio'] ?? t.t('etichetta_inviata')}');
+      final r = await Api.etichettaAlMittente(widget.id, 'whatsapp', telefono: valore.isEmpty ? null : valore);
+      final indirizzo = '${r['whatsapp'] ?? ''}';
+      var aperto = false;
+      if (indirizzo.isNotEmpty) {
+        try {
+          aperto = await launchUrl(Uri.parse(indirizzo), mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      }
+      if (!aperto && mounted) {
+        // senza numero valido (o senza WhatsApp): testo con il link condiviso dal telefono
+        final scatola = context.findRenderObject() as RenderBox?;
+        final zona = scatola == null ? null : scatola.localToGlobal(Offset.zero) & scatola.size;
+        await Share.share('${r['testo'] ?? r['link'] ?? ''}', sharePositionOrigin: zona);
+      }
     } on ErroreApi catch (e) {
       if (mounted) _avviso(e.messaggio ?? t.errore(e.codice));
     } finally {
@@ -204,39 +209,37 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     }
   }
 
-  /// Condivisione del telefono (si sceglie WhatsApp): il PDF dell'etichetta e il testo con il
-  /// link firmato; se il PDF non si scarica, solo il testo col link.
-  Future<void> _etichettaCondivisa() async {
-    setState(() => _scaricando = 'etichetta');
-    try {
-      final r = await Api.etichettaAlMittente(widget.id, 'whatsapp');
-      final testo = '${r['testo'] ?? r['link'] ?? ''}';
-      final file = <XFile>[];
-      final etichetta = _documenti.where((d) => d['tipo'] == 'awb').firstOrNull;
-      if (etichetta != null) {
-        try {
-          final byte = await Api.scarica(etichetta['url']!);
-          final cartella = await getTemporaryDirectory();
-          final percorso = '${cartella.path}/Etichetta_MOS_${widget.id}.pdf';
-          await File(percorso).writeAsBytes(byte, flush: true);
-          file.add(XFile(percorso, mimeType: 'application/pdf'));
-        } on ErroreApi {
-          // resta il link nel testo
-        }
-      }
-      if (!mounted) return;
-      final scatola = context.findRenderObject() as RenderBox?;
-      final zona = scatola == null ? null : scatola.localToGlobal(Offset.zero) & scatola.size;
-      if (file.isEmpty) {
-        await Share.share(testo, sharePositionOrigin: zona);
-      } else {
-        await Share.shareXFiles(file, text: testo, sharePositionOrigin: zona);
-      }
-    } on ErroreApi catch (e) {
-      if (mounted) _avviso(e.messaggio ?? _t.errore(e.codice));
-    } finally {
-      if (mounted) setState(() => _scaricando = null);
-    }
+  Future<String?> _chiediRecapito(
+      {required String titolo,
+      required String etichetta,
+      required String iniziale,
+      required TextInputType tastiera,
+      required String pulsante}) async {
+    final t = _t;
+    final campo = TextEditingController(text: iniziale);
+    final valore = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        title: Text(titolo, textAlign: TextAlign.center),
+        content: TextField(
+          controller: campo,
+          keyboardType: tastiera,
+          autofocus: campo.text.isEmpty,
+          decoration: InputDecoration(labelText: etichetta),
+        ),
+        actions: [
+          Row(children: [
+            Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c), child: Text(t.t('annulla')))),
+            const SizedBox(width: 12),
+            Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(c, campo.text.trim()), child: Text(pulsante))),
+          ]),
+        ],
+      ),
+    );
+    // il campo si libera solo a finestra chiusa del tutto (durante l'animazione di uscita e' ancora in uso)
+    Future.delayed(const Duration(seconds: 1), campo.dispose);
+    return valore;
   }
 
   void _avviso(String testo) {
@@ -249,12 +252,6 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     return s.length == 7 ? '${s.substring(0, 3)} ${s.substring(3)}' : s;
   }
 
-  static Color _colore(String? esadecimale) {
-    final testo = (esadecimale ?? '').replaceAll('#', '').trim();
-    final valore = int.tryParse(testo, radix: 16);
-    if (testo.length != 6 || valore == null) return Stile.grigio;
-    return Color(0xFF000000 | valore);
-  }
 
   String _nomeDocumento(Map<String, String> d) {
     final nome = (d['nome'] ?? '').trim();
@@ -298,38 +295,23 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
 
   Widget _contenuto(Testi t) {
     final s = _sped ?? {};
-    // Nota 373 V6: la casella mostra l'ultima posizione del corriere. Finche' non c'e':
-    // senza AWB la spedizione e' ancora in lavorazione (arancio, come nelle Bozze),
-    // con l'AWB «Etichetta creata» (o «Consegnata»), come nell'elenco
-    final statoCorriere = '${s['stato'] ?? ''}'.trim();
-    final senzaEtichetta = '${s['awb'] ?? ''}'.trim().isEmpty;
-    final stato = statoCorriere.isNotEmpty
-        ? statoCorriere
-        : s['consegnata'] == true
-            ? t.t('consegnata')
-            : (senzaEtichetta ? t.t('in_lavorazione') : t.t('etichetta_creata'));
-    final colore = statoCorriere.isNotEmpty
-        ? _colore(s['colore_stato'] as String?)
-        : (senzaEtichetta && s['consegnata'] != true ? const Color(0xFFFF9800) : Stile.grigio);
     final totale = s['totale'] as num?;
     final colli = ((s['colli'] as List?) ?? []).whereType<Map>().toList();
     final peso = s['peso_tassato'] as num?;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(border: Border.all(color: colore), borderRadius: Stile.angoli),
-              child: Text(stato, style: TextStyle(color: colore, fontWeight: FontWeight.w600)),
-            ),
-            const Spacer(),
-            if (totale != null)
+        // Nota 373 V8: niente stato qui (c'e' il tracciamento sotto); importo a destra con la sua scritta
+        if (totale != null)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(t.t('costo_spedizione'), style: const TextStyle(color: Stile.grigio, fontSize: 13)),
+              const SizedBox(width: 10),
               Text(SchermataProfiloState.euro(totale, t.lingua),
                   style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
-          ],
-        ),
+            ],
+          ),
         if (s['ruolo'] == 'mittente') ...[
           const SizedBox(height: 12),
           Container(
@@ -381,7 +363,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
                 ),
                 icon: _scaricando == d['url']
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.picture_as_pdf_outlined),
+                    : const Icon(Icons.picture_as_pdf_outlined, color: Stile.rossoLeggero),
                 label: Text(_nomeDocumento(d), overflow: TextOverflow.ellipsis),
                 onPressed: () => _apriDocumento(d),
               ),
@@ -393,8 +375,8 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
                   ? const SizedBox(
                       width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.send_outlined),
-              label: Text(t.t('invia_etichetta_mittente')),
-              onPressed: _scaricando == null ? _etichettaAlMittente : null,
+              label: Text(t.t('invia_etichetta')),
+              onPressed: _scaricando == null ? _inviaEtichetta : null,
             ),
           ],
         ],
@@ -434,6 +416,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
       nome(dati['contatto']),
       nome(dati['indirizzo']),
       [nome(dati['citta']), nome(dati['nazione'])].where((v) => v.isNotEmpty).join(' · '),
+      '${dati['email'] ?? ''}'.trim().toLowerCase(),
     ].where((v) => v.isNotEmpty).join('\n');
     return _riga(etichetta, righe);
   }
