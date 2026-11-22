@@ -11,7 +11,9 @@ import 'le_mie_spedizioni.dart';
 import 'mio_profilo.dart';
 import 'nuova_spedizione.dart';
 import 'pagamenti_fatture.dart';
+import 'prenota_ritiro.dart';
 import 'preventivo.dart';
+import '../widget/striscia_servizio.dart';
 
 /// Pagina principale (nota 373 V3): saluto e codice cliente, quattro card (Nuova spedizione,
 /// Preventivo veloce, Le mie spedizioni, Fatture e pagamenti), credito solo per i prepagati,
@@ -26,8 +28,11 @@ class SchermataProfilo extends StatefulWidget {
 class SchermataProfiloState extends State<SchermataProfilo> {
   Map<String, dynamic>? _io;
   Map<String, dynamic>? _credito;
-  Map<String, dynamic>? _riepilogo;
-  Map<String, dynamic>? _ultima;
+  /// Nota 373 V18: le ultime 5 spedizioni, quante fatture ci sono e quante sono da pagare
+  List<Map<String, dynamic>> _ultime = [];
+  int _fattureTotali = 0;
+  int _fattureDaPagare = 0;
+  double _totaleDaPagare = 0;
   String? _errore;
   bool _attesa = true;
 
@@ -50,31 +55,35 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       } on ErroreApi {
         credito = {'attivo': false};
       }
-      Map<String, dynamic>? ultima;
-      Map<String, dynamic>? riepilogo;
+      var ultime = <Map<String, dynamic>>[];
       try {
         final r = await Api.leMieSpedizioni();
         final righe = ((r['spedizioni'] as List?) ?? []).cast<Map<String, dynamic>>();
-        // le bozze non sono spedizioni partite: si prende la prima vera (nota 373 V8)
-        ultima = righe.where((x) => !const {'bozza', 'da_completare'}.contains('${x['tipo']}')).firstOrNull;
-        final id = ultima?['id'] as int?;
-        if (id != null) {
-          try {
-            riepilogo = await Api.spedizione(id, vecchia: '${ultima!['tipo']}' == 'vecchia');
-          } on ErroreApi catch (e) {
-            if (e.codice == 'chiave_non_valida') rethrow;
-          }
-        }
+        // le bozze non sono spedizioni partite (nota 373 V8)
+        ultime = righe.where((x) => !const {'bozza', 'da_completare'}.contains('${x['tipo']}')).take(5).toList();
       } on ErroreApi catch (e) {
         if (e.codice == 'chiave_non_valida') rethrow;
-        ultima = null;
+      }
+      var fattureTotali = 0;
+      var daPagare = 0;
+      var totaleDaPagare = 0.0;
+      try {
+        final r = await Future.wait([Api.fatture(perPagina: 1), Api.pagamentiAperti()]);
+        fattureTotali = (r[0]['totale_fatture'] as num?)?.toInt() ?? 0;
+        final f = (r[1]['fatture'] as Map?) ?? {};
+        daPagare = (f['quante'] as num?)?.toInt() ?? 0;
+        totaleDaPagare = (f['totale'] as num?)?.toDouble() ?? 0;
+      } on ErroreApi catch (e) {
+        if (e.codice == 'chiave_non_valida') rethrow;
       }
       if (!mounted) return;
       setState(() {
         _io = io;
         _credito = credito;
-        _ultima = ultima;
-        _riepilogo = riepilogo;
+        _ultime = ultime;
+        _fattureTotali = fattureTotali;
+        _fattureDaPagare = daPagare;
+        _totaleDaPagare = totaleDaPagare;
       });
       // Notifiche sul telefono: permesso e registrazione (non blocca la schermata)
       Notifiche.attiva(Testi.di(context).lingua);
@@ -107,6 +116,10 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     // credito, ultima spedizione e nome possono essere cambiati
     if (mounted) _carica();
   }
+
+  /// Nota 373 V18: la sezione mostra solo le schede che il cliente ha (fatture, credito)
+  Widget _sezionePagamenti({int scheda = 0}) => SchermataPagamentiFatture(
+      scheda: scheda, conFatture: _fattureTotali > 0, conCredito: _credito?['attivo'] == true);
 
   String get _iniziali {
     final parole = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
@@ -157,11 +170,12 @@ class SchermataProfiloState extends State<SchermataProfilo> {
   Widget _contenuto(Testi t) {
     final c = context.colori;
     final nome = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).first;
+    // Nota 373 V18: in basso a sinistra «Prenota ritiro», a destra «Le mie spedizioni»
     final voci = [
-      (Icons.public, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget, false),
-      (Icons.calculate_outlined, t.t('preventivo_veloce'), const SchermataPreventivo() as Widget, false),
-      (Icons.list_alt_outlined, t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget, false),
-      (Icons.receipt_long_outlined, t.t('pagamenti_fatture'), const SchermataPagamentiFatture() as Widget, false),
+      (Icons.public, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget),
+      (Icons.calculate_outlined, t.t('preventivo_veloce'), const SchermataPreventivo() as Widget),
+      (Icons.trolley, t.t('prenota_ritiro'), const SchermataPrenotaRitiro() as Widget),
+      (Icons.list_alt_outlined, t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget),
     ];
     final prepagato = _credito?['attivo'] == true;
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 24), children: [
@@ -180,14 +194,14 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         crossAxisSpacing: 12,
         childAspectRatio: 1.05,
         children: [
-          for (final (icona, testo, schermata, principale) in voci)
+          for (final (icona, testo, schermata) in voci)
             CardApp(
               onTap: () => _apri(schermata),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: principale ? Stile.verdePulsanti : c.cerchioIcona,
-                  child: Icon(icona, size: 28, color: principale || context.temaScuro ? Colors.white : Stile.verdePulsanti),
+                  backgroundColor: c.cerchioIcona,
+                  child: Icon(icona, size: 28, color: context.temaScuro ? Colors.white : Stile.verdePulsanti),
                 ),
                 const SizedBox(height: 14),
                 // sempre lo spazio di due righe: le quattro icone restano allineate
@@ -206,7 +220,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         const SizedBox(height: 12),
         CardApp(
           // nota 373 V8: apre direttamente la scheda Credito
-          onTap: () => _apri(const SchermataPagamentiFatture(scheda: 1)),
+          onTap: () => _apri(_sezionePagamenti(scheda: 1)),
           child: Row(children: [
             Expanded(child: Text(t.t('saldo'), style: TextStyle(color: Stile.grigio))),
             Text(euro((_credito?['saldo'] as num?) ?? 0, t.lingua),
@@ -214,22 +228,48 @@ class SchermataProfiloState extends State<SchermataProfilo> {
           ]),
         ),
       ],
-      if (_ultima != null) ...[
+      // Nota 373 V18: solo se ci sono fatture da pagare; apre le Fatture
+      if (_fattureDaPagare > 0) ...[
         const SizedBox(height: 12),
-        _UltimaSpedizione(riga: _ultima!, riepilogo: _riepilogo, apri: _apri),
+        CardApp(
+          onTap: () => _apri(_sezionePagamenti()),
+          child: Row(children: [
+            Expanded(child: Text('${t.t('fatture_da_pagare')} ($_fattureDaPagare)', style: TextStyle(color: Stile.grigio))),
+            Text(euro(_totaleDaPagare, t.lingua),
+                style: const TextStyle(color: Stile.rosso, fontSize: 22, fontWeight: FontWeight.w700)),
+          ]),
+        ),
+      ],
+      if (_ultime.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        Text(t.t('ultime_spedizioni'), style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        for (final riga in _ultime)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _UltimaSpedizione(riga: riga, apri: _apri),
+          ),
       ],
     ]);
   }
 }
 
-/// Nota 373 V8: in alto «Ultima spedizione» e, a destra, MOS e data; sotto mittente e
-/// destinatario con nome, CAP, citta' e nazione; in basso a destra «Apri».
+/// Nota 373 V18: una delle ultime spedizioni. MOS e data, mittente e destinatario, servizio
+/// con la sua striscia e lo stato; una freccina a destra, si apre toccando la card.
 class _UltimaSpedizione extends StatelessWidget {
-  const _UltimaSpedizione({required this.riga, required this.riepilogo, required this.apri});
+  const _UltimaSpedizione({required this.riga, required this.apri});
 
   final Map<String, dynamic> riga;
-  final Map<String, dynamic>? riepilogo;
   final Future<void> Function(Widget) apri;
+
+  static const _arancio = Color(0xFFFF9800);
+
+  static Color _colore(String? esadecimale) {
+    final testo = (esadecimale ?? '').replaceAll('#', '').trim();
+    final valore = int.tryParse(testo, radix: 16);
+    if (testo.length != 6 || valore == null) return Stile.grigio;
+    return Color(0xFF000000 | valore);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -237,55 +277,73 @@ class _UltimaSpedizione extends StatelessWidget {
     final c = context.colori;
     final id = riga['id'] as int?;
     final tipo = '${riga['tipo']}';
-    final mitt = riepilogo?['mitt'] as Map?;
-    final dest = riepilogo?['dest'] as Map? ??
-        {'societa': riga['destinatario'], 'citta': riga['dest_citta'], 'nazione': riga['dest_codice_nazione']};
-    final data = riga['data'] ?? riepilogo?['data'];
+    final lavorazione = riga['da_pagare'] == true || tipo == 'richiesta';
+    final colore = lavorazione ? _arancio : _colore(riga['colore'] as String?);
+    final scuro = context.temaScuro ? colore : (Color.lerp(colore, Colors.black, 0.35) ?? colore);
+    final stato = lavorazione ? t.t('in_lavorazione') : '${riga['stato'] ?? ''}'.trim();
+    final servizio = '${riga['servizio'] ?? ''}'.trim();
     return CardApp(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: Text(t.t('ultima_spedizione'), style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
-          ),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('MOS ${_mos(riga['mos'] ?? riga['id'])}',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: c.testo)),
-            if (data != null) Text('$data', style: TextStyle(color: Stile.grigio, fontSize: 13)),
+      padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+      onTap: id == null ? null : () => apri(SchermataDettaglioSpedizione(id: id, vecchia: tipo == 'vecchia')),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Expanded(
+                child: Text('MOS ${_mos(riga['mos'] ?? riga['id'])}',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: c.testo)),
+              ),
+              if (riga['data'] != null) Text('${riga['data']}', style: TextStyle(color: Stile.grigio, fontSize: 13)),
+            ]),
+            const SizedBox(height: 6),
+            _lato(context, t.t('mittente'), riga['mittente'], riga['mitt_cap'], riga['mitt_citta'],
+                riga['mitt_nazione'] ?? riga['mitt_codice_nazione']),
+            _lato(context, t.t('destinatario'), riga['destinatario'], riga['dest_cap'], riga['dest_citta'],
+                riga['dest_nazione'] ?? riga['dest_codice_nazione']),
+            const SizedBox(height: 2),
+            Row(children: [
+              if (servizio.isNotEmpty) ...[
+                StrisciaServizio(colore: StrisciaServizio.daTesto(riga['colore_servizio']), larghezza: 24, altezza: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(servizio,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.testo)),
+                ),
+              ] else
+                const Spacer(),
+              if (stato.isNotEmpty)
+                Flexible(
+                  child: Text(stato,
+                      maxLines: 2,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: scuro, fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+            ]),
           ]),
-        ]),
-        const SizedBox(height: 10),
-        if (mitt != null) _lato(context, t.t('mittente'), mitt),
-        _lato(context, t.t('destinatario'), dest),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerRight,
-          child: SizedBox(
-            height: 38,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(minimumSize: const Size(96, 38)),
-              onPressed: id == null ? null : () => apri(SchermataDettaglioSpedizione(id: id, vecchia: tipo == 'vecchia')),
-              child: Text(t.t('apri')),
-            ),
-          ),
         ),
+        Icon(Icons.chevron_right, color: Stile.grigio),
       ]),
     );
   }
 
-  Widget _lato(BuildContext context, String etichetta, Map dati) {
-    String nome(dynamic v) => Api.nomeProprio(v == null ? '' : '$v'.trim());
-    final chi = nome(dati['societa']).isNotEmpty ? nome(dati['societa']) : nome(dati['contatto']);
-    final dove = [nome(dati['citta']), nome(dati['nazione'])].where((v) => v.isNotEmpty).join(' · ');
+  Widget _lato(BuildContext context, String etichetta, dynamic nome, dynamic cap, dynamic citta, dynamic nazione) {
+    String pulito(dynamic v) => Api.nomeProprio(v == null ? '' : '$v'.trim());
+    final chi = pulito(nome);
+    final luogo = [cap == null ? '' : '$cap'.trim(), pulito(citta)].where((v) => v.isNotEmpty).join(' ');
+    final dove = [luogo, pulito(nazione)].where((v) => v.isNotEmpty).join(' · ');
+    if (chi.isEmpty && dove.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 100, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
+        SizedBox(width: 92, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 12))),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (chi.isNotEmpty)
-              Text(chi, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.colori.testo)),
-            if (dove.isNotEmpty) Text(dove, style: TextStyle(color: Stile.grigio, fontSize: 13)),
-          ]),
+          child: Text([chi, dove].where((v) => v.isNotEmpty).join(' · '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: context.colori.testo)),
         ),
       ]),
     );
@@ -336,7 +394,7 @@ class BarraInBasso extends StatelessWidget {
           case 1:
             apri(const SchermataLeMieSpedizioni());
           case 2:
-            apri(const SchermataPagamentiFatture());
+            apri(const SchermataPrenotaRitiro());
           case 3:
             apri(const SchermataMioProfilo());
         }
@@ -345,7 +403,8 @@ class BarraInBasso extends StatelessWidget {
         NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: t.t('home')),
         NavigationDestination(icon: const Icon(Icons.public), label: t.t('spedizioni')),
         // nella barra il nome completo andrebbe su due righe: qui la sola prima parola
-        NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), label: t.t('fatture')),
+        // nota 373 V18: «Ritiro» al posto di Fatture
+        NavigationDestination(icon: const Icon(Icons.trolley), label: t.t('ritiro')),
         NavigationDestination(icon: const Icon(Icons.person_outline), label: t.t('profilo')),
       ],
     );

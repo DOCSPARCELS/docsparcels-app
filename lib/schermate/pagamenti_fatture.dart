@@ -17,10 +17,14 @@ import 'profilo.dart';
 /// Si paga come sul sito: carta nella pagina myPOS dentro l'app, bonifico con IBAN e
 /// causale da copiare, credito per le fatture se basta.
 class SchermataPagamentiFatture extends StatefulWidget {
-  const SchermataPagamentiFatture({super.key, this.scheda = 0});
+  const SchermataPagamentiFatture({super.key, this.scheda = 0, this.conFatture = true, this.conCredito = true});
 
   /// 0 = Fatture, 1 = Credito (dalla card «Credito disponibile» della home, nota 373 V8)
   final int scheda;
+
+  /// Nota 373 V18: solo le schede che il cliente ha (fatture, credito prepagato)
+  final bool conFatture;
+  final bool conCredito;
 
   @override
   State<SchermataPagamentiFatture> createState() => _SchermataPagamentiFattureState();
@@ -135,13 +139,19 @@ String _statoFattura(Map<String, dynamic> f, Testi t) => f['nota_credito'] == tr
 
 class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> with SingleTickerProviderStateMixin {
   // Nota 373 V5: niente piu' scheda «Da pagare»; le spedizioni da pagare stanno nelle Bozze
-  late final TabController _schede = TabController(length: 2, vsync: this, initialIndex: widget.scheda);
+  /// Nota 373 V18: le schede presenti, in ordine ('fatture', 'credito')
+  late final List<String> _nomi = [
+    if (widget.conFatture || !widget.conCredito) 'fatture',
+    if (widget.conCredito) 'credito',
+  ];
+  late final int _iniziale = _nomi.indexOf(widget.scheda == 1 ? 'credito' : 'fatture').clamp(0, _nomi.length - 1);
+  late final TabController _schede = TabController(length: _nomi.length, vsync: this, initialIndex: _iniziale);
   final _chiaveFatture = GlobalKey<_FattureState>();
   final _chiaveCredito = GlobalKey<_CreditoState>();
 
   /// Schede viste prima: la freccia indietro ci torna, dalla prima si esce
   final List<int> _storia = [];
-  late int _ultima = widget.scheda;
+  late int _ultima = _iniziale;
 
   @override
   void initState() {
@@ -185,19 +195,24 @@ class _SchermataPagamentiFattureState extends State<SchermataPagamentiFatture> w
         appBar: barraApp(
           context,
           // il titolo segue la scheda aperta (nota 373 V8)
-          titolo: _schede.index == 1 ? t.t('credito') : t.t('pagamenti_fatture'),
-          sotto: TabBar(
-            controller: _schede,
-            indicatorColor: Stile.verde,
-            labelColor: Stile.verde,
-            unselectedLabelColor: Stile.grigio,
-            tabs: [Tab(text: t.t('fatture')), Tab(text: t.t('credito'))],
-          ),
+          titolo: _nomi[_schede.index] == 'credito' ? t.t('credito') : t.t('pagamenti_fatture'),
+          // con una scheda sola niente barra delle schede
+          sotto: _nomi.length < 2
+              ? null
+              : TabBar(
+                  controller: _schede,
+                  indicatorColor: Stile.verde,
+                  labelColor: Stile.verde,
+                  unselectedLabelColor: Stile.grigio,
+                  tabs: [for (final n in _nomi) Tab(text: t.t(n))],
+                ),
         ),
         body: SafeArea(
           child: TabBarView(controller: _schede, children: [
-            _Fatture(key: _chiaveFatture, cambiato: _rileggiTutto),
-            _Credito(key: _chiaveCredito, cambiato: _rileggiTutto),
+            for (final n in _nomi)
+              n == 'fatture'
+                  ? _Fatture(key: _chiaveFatture, cambiato: _rileggiTutto)
+                  : _Credito(key: _chiaveCredito, cambiato: _rileggiTutto),
           ]),
         ),
       ),

@@ -306,6 +306,15 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Nota 373 V18: spedizione non ancora generata (richiesta) = in lavorazione, in sola lettura
+        if (s['generata'] == false)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(t.t('in_lavorazione'),
+                style: TextStyle(
+                    color: context.temaScuro ? const Color(0xFFFF9800) : const Color(0xFFB36A00),
+                    fontWeight: FontWeight.w700)),
+          ),
         // Nota 373 V8: niente stato qui (c'e' il tracciamento sotto); importo a destra con la sua scritta
         if (totale != null)
           Row(
@@ -341,6 +350,12 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         for (var i = 0; i < colli.length; i++) _riga('${t.t('collo')} ${i + 1}', _misureCollo(colli[i], t.lingua)),
         _persona(t.t('mittente'), s['mitt']),
         _persona(t.t('destinatario'), s['dest']),
+        // Nota 373 V18: ritiro prenotato (o chiesto) con la spedizione
+        if (s['ritiro'] is Map) ...[
+          const SizedBox(height: 20),
+          _titolo(t.t('ritiro')),
+          ..._righeRitiro(t, (s['ritiro'] as Map).cast<String, dynamic>()),
+        ],
         const SizedBox(height: 20),
         _titolo(t.t('tracciamento')),
         if (_passaggi.isEmpty)
@@ -441,6 +456,24 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         ),
       ]),
     );
+  }
+
+  List<Widget> _righeRitiro(Testi t, Map<String, dynamic> r) {
+    String v(String k) => '${r[k] ?? ''}'.trim();
+    String ora(String k) => v(k).length >= 5 ? v(k).substring(0, 5) : v(k);
+    String fascia(String a, String b) => [ora(a), ora(b)].where((x) => x.isNotEmpty).join(' – ');
+    final data = v('data_ritiro');
+    return [
+      _riga(t.t('stato'), v('stato')),
+      _riga(t.t('corriere_ritiro'), v('vettore')),
+      _riga(t.t('giorno_ritiro'), data.length >= 10 ? Api.dataBreve(data) : data),
+      _riga(t.t('mattino_dalle'), fascia('ora_mattino_dalle', 'ora_mattino_alle')),
+      _riga(t.t('pomeriggio_dalle'), fascia('ora_pomeriggio_dalle', 'ora_pomeriggio_alle')),
+      _riga(t.t('pronti_dalle'), ora('ora_pronti_dalle')),
+      _riga(t.t('punto_ritiro'), v('punto_ritiro')),
+      _riga(t.t('prenotazione_ritiro'), v('booking_id')),
+      _riga(t.t('note_ritiro'), v('note')),
+    ];
   }
 
   /// «2 kg · 30 × 20 × 10 cm»

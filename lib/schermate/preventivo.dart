@@ -9,6 +9,7 @@ import 'entrata.dart';
 import 'nuova_spedizione.dart';
 import 'profilo.dart';
 import '../widget/striscia_servizio.dart';
+import '../widget/campo_cap.dart';
 
 /// Preventivo veloce: partenza, arrivo, documenti o pacco, colli e «Calcola».
 /// I prezzi li calcola il server (/cliente/api/calcola), gli stessi dell'area cliente.
@@ -86,11 +87,17 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
 
   Future<void> _caricaNazioni() async {
     try {
-      final nazioni = await Api.nazioni();
+      final r = await Future.wait([Api.nazioni(), Api.datiNuovaSpedizione()]);
+      final nazioni = r[0] as List<Map<String, dynamic>>;
+      // Nota 373 V18: partenza gia' compilata con l'indirizzo del cliente
+      final m = ((r[1] as Map<String, dynamic>)['mittente'] as Map?) ?? {};
       if (!mounted) return;
       setState(() {
         _nazioni = nazioni;
-        _partenza.nazione ??= nazioni.where((n) => n['codice'] == 'IT').firstOrNull;
+        final codice = '${m['codice_nazione'] ?? ''}'.trim().toUpperCase();
+        _partenza.nazione ??= nazioni.where((n) => n['codice'] == (codice.isEmpty ? 'IT' : codice)).firstOrNull;
+        if (_partenza.cap.text.isEmpty) _partenza.cap.text = '${m['cap'] ?? ''}'.trim();
+        if (_partenza.citta.text.isEmpty) _partenza.citta.text = '${m['citta'] ?? ''}'.trim();
       });
     } on ErroreApi catch (e) {
       await _gestisciErrore(e);
@@ -125,10 +132,75 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
     return mancanti;
   }
 
+  /// Peso volumetrico di un collo (cm, divisore 5000)
+  static double _volumetrico(_Collo c) => _numero(c.lunghezza) * _numero(c.larghezza) * _numero(c.altezza) / 5000;
+
+  /// Nota 373 V19 (regola decisa da Luca): si chiede conferma delle misure quando un collo ha il
+  /// volumetrico oltre 2,5 kg e almeno 3,5 volte il peso reale. Solo un avviso: si puo' confermare.
+  static const _sogliaVolumetrico = 2.5;
+  static const _rapportoSospetto = 3.5;
+
+  Future<bool> _misureConfermate() async {
+    final testi = Testi.di(context);
+    for (final c in _colli) {
+      final vol = _volumetrico(c);
+      final reale = _numero(c.peso);
+      if (vol > _sogliaVolumetrico && vol >= reale * _rapportoSospetto) {
+        final kg = vol.toStringAsFixed(1).replaceAll('.', testi.lingua == 'en' ? '.' : ',');
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (d) => AlertDialog(
+            shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+            icon: const Icon(Icons.straighten, color: Stile.verde, size: 40),
+            content: Text(testi.t('misure_sicuro').replaceAll('{kg}', kg), textAlign: TextAlign.center),
+            actions: [
+              Row(children: [
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(d, false), child: Text(testi.t('correggi')))),
+                const SizedBox(width: 12),
+                Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(d, true), child: Text(testi.t('si')))),
+              ]),
+            ],
+          ),
+        );
+        if (ok != true) return false;
+        break;
+      }
+    }
+    return true;
+  }
+
+  /// Documenti oltre 2,5 kg (peso reale o volumetrico): si calcolano come merce, senza avvisi
+  int get _tipologiaDaUsare {
+    if (_tipologia != _tipologiaDocumenti) return _tipologia;
+    final oltre = _colli.any((c) => _numero(c.peso) > _sogliaVolumetrico || _volumetrico(c) > _sogliaVolumetrico);
+    return oltre ? _tipologiaPacco : _tipologia;
+  }
+
+  /// Nota 373 V18: inverte partenza e arrivo
+  void _inverti() {
+    setState(() {
+      final n = _partenza.nazione;
+      final cap = _partenza.cap.text;
+      final citta = _partenza.citta.text;
+      final contatto = _partenza.contatto;
+      _partenza.nazione = _arrivo.nazione;
+      _partenza.cap.text = _arrivo.cap.text;
+      _partenza.citta.text = _arrivo.citta.text;
+      _partenza.contatto = _arrivo.contatto;
+      _arrivo.nazione = n;
+      _arrivo.cap.text = cap;
+      _arrivo.citta.text = citta;
+      _arrivo.contatto = contatto;
+    });
+    _cambiato();
+  }
+
   Future<void> _calcola() async {
     FocusScope.of(context).unfocus();
     final testi = Testi.di(context);
     final mancanti = _campiMancanti();
+    if (mancanti.isEmpty && !await _misureConfermate()) return;
+    if (!mounted) return;
     setState(() {
       _mancanti = mancanti;
       _tariffe = null;
@@ -147,7 +219,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         'colli': [
           for (final c in _colli)
             {
-              'tipologia': _tipologia,
+              'tipologia': _tipologiaDaUsare,
               'imballaggio': '',
               'peso': _numero(c.peso),
               'lunghezza': _numero(c.lunghezza),
@@ -292,20 +364,24 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
         ),
         const SizedBox(height: 12),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 120,
-              child: TextField(
-                controller: luogo.cap,
-                textInputAction: TextInputAction.next,
-                onChanged: (_) {
-                  luogo.contatto = null;
-                  _cambiato();
-                },
-                decoration: _decorazione(testi.t('cap'), '${prefisso}_cap'),
+            // Nota 373 V18: CAP come nel gestionale (obbligatorio con formato, o niente se la nazione non lo ha)
+            if (CampoCap.serve(nazione)) ...[
+              SizedBox(
+                width: 130,
+                child: CampoCap(
+                  controller: luogo.cap,
+                  nazione: nazione,
+                  decorazione: _decorazione(testi.t('cap'), '${prefisso}_cap'),
+                  cambiato: () {
+                    luogo.contatto = null;
+                    _cambiato();
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: TextField(
                 controller: luogo.citta,
@@ -454,6 +530,14 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _titolo(testi.t('partenza'), rubrica: () => _dallaRubrica(_partenza)),
             _luogo(testi, _partenza, 'p'),
+            // Nota 373 V18: inverte partenza e arrivo
+            Center(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.swap_vert),
+                label: Text(testi.t('inverti')),
+                onPressed: _inverti,
+              ),
+            ),
             _titolo(testi.t('arrivo'), rubrica: () => _dallaRubrica(_arrivo)),
             _luogo(testi, _arrivo, 'a'),
             const SizedBox(height: 20),

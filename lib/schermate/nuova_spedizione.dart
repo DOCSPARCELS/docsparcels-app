@@ -12,6 +12,7 @@ import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
 import 'pagamento_carta.dart';
 import 'profilo.dart';
+import '../widget/campo_cap.dart';
 
 /// Nuova spedizione del cliente (nota 367 V2): la stessa richiesta dell'area cliente web.
 /// Un passo alla volta: mittente, destinatario, colli, servizio, ritiro, riepilogo e invio.
@@ -307,8 +308,11 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   Map<String, dynamic>? _nazione(String codice) =>
       _nazioni.where((n) => '${n['codice']}'.toUpperCase() == codice.toUpperCase()).firstOrNull;
 
-  List<Map<String, dynamic>> get _imballaggi =>
-      ((_dati['imballaggi'] as List?) ?? []).cast<Map<String, dynamic>>();
+  /// Nota 373 V18: l'Envelope (id 1) compare solo con «Documenti»
+  List<Map<String, dynamic>> get _imballaggi => ((_dati['imballaggi'] as List?) ?? [])
+      .cast<Map<String, dynamic>>()
+      .where((i) => _documenti || i['id'] != 1)
+      .toList();
 
   /// Busta (Envelope) per i documenti, altrimenti il primo imballaggio che non e' una busta
   int? _imballaggioPredefinito() {
@@ -504,11 +508,44 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
     return null;
   }
 
+  /// Nota 373 V19, stessa regola del preventivo: volumetrico (cm, divisore 5000) oltre 2,5 kg
+  /// e almeno 3,5 volte il peso reale -> «Sei sicuro delle misure?»
+  Future<bool> _misureConfermate() async {
+    final t = _t;
+    for (final c in _colli) {
+      final vol = _numero(c.lunghezza) * _numero(c.larghezza) * _numero(c.altezza) / 5000;
+      final reale = _numero(c.peso);
+      if (vol > 2.5 && vol >= reale * 3.5) {
+        final kg = vol.toStringAsFixed(1).replaceAll('.', t.lingua == 'en' ? '.' : ',');
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (d) => AlertDialog(
+            shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+            icon: const Icon(Icons.straighten, color: Stile.verde, size: 40),
+            content: Text(t.t('misure_sicuro').replaceAll('{kg}', kg), textAlign: TextAlign.center),
+            actions: [
+              Row(children: [
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(d, false), child: Text(t.t('correggi')))),
+                const SizedBox(width: 12),
+                Expanded(child: ElevatedButton(onPressed: () => Navigator.pop(d, true), child: Text(t.t('si')))),
+              ]),
+            ],
+          ),
+        );
+        return ok == true;
+      }
+    }
+    return true;
+  }
+
   Future<void> _avanti() async {
     FocusScope.of(context).unfocus();
     final errore = _controllaPasso();
     setState(() => _errore = errore);
     if (errore != null) return;
+    // Nota 373 V19: misure sospette (solo un avviso, si puo' confermare)
+    if (_passo == 2 && !await _misureConfermate()) return;
+    if (!mounted) return;
     setState(() => _attesa = true);
     // Salvataggio con questo passo: il servizio e il prezzo dipendono dai dati gia' scritti
     final ok = await _salvaBozza();
@@ -833,8 +870,30 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   Widget _sezione(String pre, _Sezione s) {
     final t = _t;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _pulsanteBordo(t.t('scegli_da_rubrica'), _attesa ? null : () => _scegliDaRubrica(s), icona: Icons.contacts),
-      const SizedBox(height: 16),
+      // Nota 373 V18: solo l'icona dei due omini, a destra; nel mittente «Pulisci campi»
+      Row(children: [
+        if (pre == 'mitt')
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Stile.grigio, padding: EdgeInsets.zero),
+            icon: const Icon(Icons.cleaning_services_outlined, size: 18),
+            label: Text(t.t('pulisci_campi')),
+            onPressed: () => setState(() {
+              for (final c in s.campi) {
+                c.clear();
+              }
+              s.codiceRubrica = null;
+              _mancanti = {};
+            }),
+          ),
+        const Spacer(),
+        IconButton(
+          tooltip: t.t('scegli_da_rubrica'),
+          iconSize: 28,
+          icon: const Icon(Icons.people, color: Stile.verde),
+          onPressed: _attesa ? null : () => _scegliDaRubrica(s),
+        ),
+      ]),
+      const SizedBox(height: 4),
       _campo(s.societa, t.t('societa'), '${pre}_societa', sezione: s, maiuscole: TextCapitalization.words),
       _campo(s.contatto, t.t('nome'), '${pre}_contatto', sezione: s, maiuscole: TextCapitalization.words),
       Padding(
@@ -856,9 +915,27 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         ),
       ),
       _campo(s.indirizzo, t.t('indirizzo'), '${pre}_indirizzo', sezione: s, max: 35, maiuscole: TextCapitalization.words),
-      Row(children: [
-        SizedBox(width: 100, child: _campo(s.cap, t.t('cap'), '${pre}_cap', sezione: s, max: 9)),
-        const SizedBox(width: 8),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Nota 373 V18: CAP come nel gestionale (obbligatorio con formato, o niente se la nazione non lo ha)
+        if (CampoCap.serve(s.nazione)) ...[
+          SizedBox(
+            width: 118,
+            child: CampoCap(
+              controller: s.cap,
+              nazione: s.nazione,
+              decorazione: _decorazione(t.t('cap'), '${pre}_cap'),
+              cambiato: () {
+                if (s.codiceRubrica != null || _mancanti.isNotEmpty) {
+                  setState(() {
+                    s.codiceRubrica = null;
+                    _mancanti.remove('${pre}_cap');
+                  });
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
         Expanded(child: _campo(s.citta, t.t('citta'), '${pre}_citta', sezione: s, maiuscole: TextCapitalization.words)),
         const SizedBox(width: 8),
         SizedBox(
@@ -922,7 +999,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.fromLTRB(12, 4, 4, 12),
-          decoration: BoxDecoration(border: Border.all(color: Stile.grigio), borderRadius: Stile.angoli),
+          // nota 373 V18: bordo piu' leggero
+          decoration: BoxDecoration(border: Border.all(color: context.colori.bordo), borderRadius: Stile.angoli),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
               Expanded(child: Text('${t.t('collo')} ${i + 1}', style: TextStyle(color: Stile.grigio))),
@@ -942,7 +1020,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
                   DropdownButtonFormField<int>(
                     // la chiave cambia col valore: l'azzeramento da Documenti/Merce si vede subito
                     key: ValueKey('imballaggio_${i}_${_colli[i].imballaggio}'),
-                    initialValue: _colli[i].imballaggio,
+                    // un valore non in elenco (es. Envelope con Merce) farebbe cadere la tendina
+                    initialValue: _imballaggi.any((im) => im['id'] == _colli[i].imballaggio) ? _colli[i].imballaggio : null,
                     isDense: true,
                     decoration: _decorazione(t.t('imballaggio'), 'imballaggio_$i'),
                     items: [
@@ -1395,13 +1474,24 @@ class SceltaRubricaStato extends State<SceltaRubrica> {
         height: MediaQuery.of(context).size.height * 0.8,
         child: Column(children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              autofocus: true,
-              decoration: InputDecoration(
-                  labelText: widget.testi.t('cerca_rubrica'), prefixIcon: const Icon(Icons.search), isDense: true),
-              onChanged: (v) => setState(() => _cerca = v.trim()),
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 4, 16),
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  autofocus: true,
+                  decoration: InputDecoration(
+                      labelText: widget.testi.t('cerca_rubrica'), prefixIcon: const Icon(Icons.search), isDense: true),
+                  onChanged: (v) => setState(() => _cerca = v.trim()),
+                ),
+              ),
+              // Nota 373 V18: X per chiudere la rubrica, ben visibile
+              IconButton(
+                tooltip: widget.testi.t('chiudi'),
+                iconSize: 30,
+                icon: Icon(Icons.close, color: context.colori.testo),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ]),
           ),
           Expanded(
             child: elenco.isEmpty

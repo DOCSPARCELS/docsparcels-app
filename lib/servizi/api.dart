@@ -155,6 +155,10 @@ class Api {
   }
 
   /// Salva in rubrica un mittente o destinatario scritto a mano.
+  /// Nota 373 V18: ritiro chiesto dal cliente (come «Nuovo ritiro» del sito). Ritorna {messaggio, ritiro_id}.
+  static Future<Map<String, dynamic>> prenotaRitiro(Map<String, dynamic> dati) async =>
+      _postCorpo('/cliente/api/ritiri', dati, tempo: const Duration(seconds: 60));
+
   static Future<void> salvaInRubrica(Map<String, dynamic> contatto) async {
     await _postCorpo('/cliente/api/contatti/aggiungi-da-spedizione', contatto);
   }
