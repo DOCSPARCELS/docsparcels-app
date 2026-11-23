@@ -9,6 +9,7 @@ import '../testi.dart';
 import '../widget/barra.dart';
 import '../widget/riquadro_bonifico.dart';
 import '../widget/scelta_nazione.dart';
+import '../widget/striscia_servizio.dart';
 import 'entrata.dart';
 import 'pagamento_carta.dart';
 import 'profilo.dart';
@@ -1084,22 +1085,32 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
       for (final s in servizi)
         Container(
           margin: const EdgeInsets.only(bottom: 8),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: s['id'] == id ? Stile.verde : Stile.grigio, width: 4)),
             color: s['id'] == id ? Stile.verde.withValues(alpha: 0.12) : context.colori.card,
             borderRadius: Stile.angoli,
           ),
-          child: ListTile(
-            title: Text('${s['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: s['iva_inclusa'] == true ? Text(t.t('iva_inclusa'), style: const TextStyle(fontSize: 11)) : null,
-            trailing: Text(_euro(s['totale'] as num?),
-                style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
-            onTap: () => setState(() {
-              _servizio = s;
-              _puntoMittente = null;
-              _puntoDestinazione = null;
-              _errore = null;
-            }),
+          // Nota 389: la striscia sfumata col colore del servizio, la stessa del preventivo
+          child: IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              StrisciaServizio(colore: StrisciaServizio.daTesto(s['colore'])),
+              Expanded(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.only(left: 4, right: 16),
+                  title: Text('${s['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle:
+                      s['iva_inclusa'] == true ? Text(t.t('iva_inclusa'), style: const TextStyle(fontSize: 11)) : null,
+                  trailing: Text(_euro(s['totale'] as num?),
+                      style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
+                  onTap: () => setState(() {
+                    _servizio = s;
+                    _puntoMittente = null;
+                    _puntoDestinazione = null;
+                    _errore = null;
+                  }),
+                ),
+              ),
+            ]),
           ),
         ),
       if (id != null && _serviziPoint.contains(id)) ...[
