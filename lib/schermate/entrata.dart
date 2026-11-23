@@ -3,6 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../servizi/api.dart';
 import '../servizi/biometria.dart';
+import '../servizi/google.dart';
+import 'collega_account.dart';
 import '../servizi/lingua.dart';
 import '../stile.dart';
 import '../testi.dart';
@@ -25,6 +27,7 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
   final _login = TextEditingController();
   final _password = TextEditingController();
   bool _attesa = false;
+  bool _attesaGoogle = false;
   bool _nascosta = true;
   String? _errore;
 
@@ -66,6 +69,66 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
     } finally {
       if (mounted) setState(() => _attesa = false);
     }
+  }
+
+  /// Accedi con Google (nota 373 V41). Se l'account Google non e' ancora di un cliente,
+  /// si collega una volta con email e password (SchermataCollegaAccount).
+  Future<void> _entraConGoogle() async {
+    final testi = Testi.di(context);
+    setState(() {
+      _attesaGoogle = true;
+      _errore = null;
+    });
+    try {
+      final gettone = await AccessoGoogle.gettone();
+      if (gettone == null || !mounted) return;
+      try {
+        await Api.entraGoogle(gettone, testi.lingua);
+      } on ErroreApi catch (e) {
+        if (e.codice != 'da_collegare' || !mounted) rethrow;
+        final collegato = await Navigator.of(context)
+            .push<bool>(MaterialPageRoute(builder: (_) => SchermataCollegaAccount(gettone: gettone)));
+        if (collegato != true) return;
+      }
+      if (!mounted) return;
+      await _proponiBiometria(testi);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SchermataProfilo()));
+    } on ErroreGoogle catch (e) {
+      debugPrint('🔐 Accedi con Google: $e');
+      if (mounted) {
+        setState(() => _errore =
+            testi.t(e.codice == 'non_disponibile' ? 'google_non_disponibile' : 'errore_google_non_valido'));
+      }
+    } on ErroreApi catch (e) {
+      if (mounted) setState(() => _errore = testi.errore(e.codice));
+    } catch (_) {
+      if (mounted) setState(() => _errore = testi.errore('generico'));
+    } finally {
+      if (mounted) setState(() => _attesaGoogle = false);
+    }
+  }
+
+  /// Pulsante Google: bianco col bordo grigio nel tema chiaro, scuro nel tema scuro (regole di Google)
+  Widget _pulsanteGoogle(Testi testi) {
+    final scuro = context.temaScuro;
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: scuro ? const Color(0xFF131314) : Colors.white,
+        foregroundColor: scuro ? const Color(0xFFE3E3E3) : const Color(0xFF1F1F1F),
+        side: BorderSide(color: scuro ? const Color(0xFF8E918F) : const Color(0xFF747775)),
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        minimumSize: const Size.fromHeight(48),
+      ),
+      onPressed: _attesa || _attesaGoogle ? null : _entraConGoogle,
+      child: _attesaGoogle
+          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+          : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Image.asset('assets/immagini/google_g.png', width: 20, height: 20),
+              const SizedBox(width: 12),
+              Text(testi.t('accedi_google'), style: const TextStyle(fontWeight: FontWeight.w500)),
+            ]),
+    );
   }
 
   /// Dopo la prima entrata: Face ID / impronta per le prossime aperture, se il telefono li ha.
@@ -201,7 +264,7 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   ],
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _attesa ? null : _entra,
+                    onPressed: _attesa || _attesaGoogle ? null : _entra,
                     child: _attesa
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(testi.t('entra')),
@@ -214,6 +277,18 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                         builder: (_) => SchermataRecuperoPassword(email: _login.text))),
                     child: Text(testi.t('password_dimenticata')),
                   ),
+                  // Nota 373 V41: oppure, accedi con Google
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(child: Divider(color: Stile.grigio.withValues(alpha: 0.4))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(testi.t('oppure'), style: TextStyle(color: Stile.grigio)),
+                    ),
+                    Expanded(child: Divider(color: Stile.grigio.withValues(alpha: 0.4))),
+                  ]),
+                  const SizedBox(height: 16),
+                  _pulsanteGoogle(testi),
                   const SizedBox(height: 24),
                   // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
                   const SceltaTema(),

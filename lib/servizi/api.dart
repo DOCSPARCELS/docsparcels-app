@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 import 'biometria.dart';
 import 'chiave.dart';
+import 'google.dart';
 import 'notifiche.dart';
 
 /// Errore del gestionale: [codice] e' quello che manda il server (es. credenziali_errate),
@@ -84,6 +85,32 @@ class Api {
             'login': login.trim(),
             'password': password,
             'lingua': lingua,
+            'telefono': Platform.isIOS ? 'iPhone' : 'Android',
+            'piattaforma': Platform.isIOS ? 'ios' : 'android',
+            'versione': Config.versione,
+          }),
+        ));
+    final dati = _risposta(r);
+    await ArchivioChiave.salva(dati['chiave'] as String);
+    return (dati['utente'] as Map<String, dynamic>?) ?? {};
+  }
+
+  /// POST /app/api/entra-google (nota 373 V41): entrata con il gettone di Google.
+  /// Se l'account Google non e' ancora di un cliente: ErroreApi con codice «da_collegare».
+  static Future<Map<String, dynamic>> entraGoogle(String gettone, String lingua) =>
+      _entraEsterno('/app/api/entra-google', {'id_token': gettone, 'lingua': lingua});
+
+  /// POST /app/api/collega-google (nota 373 V41): collega l'account Google con email e password, ed entra.
+  static Future<Map<String, dynamic>> collegaGoogle(String gettone, String login, String password, String lingua) =>
+      _entraEsterno('/app/api/collega-google',
+          {'id_token': gettone, 'login': login.trim(), 'password': password, 'lingua': lingua});
+
+  static Future<Map<String, dynamic>> _entraEsterno(String percorso, Map<String, dynamic> corpo) async {
+    final r = await _manda(() async => http.post(
+          _url(percorso),
+          headers: await _intestazioni(conChiave: false),
+          body: jsonEncode({
+            ...corpo,
             'telefono': Platform.isIOS ? 'iPhone' : 'Android',
             'piattaforma': Platform.isIOS ? 'ios' : 'android',
             'versione': Config.versione,
@@ -493,5 +520,7 @@ class Api {
       // anche senza rete l'uscita dal telefono deve riuscire
     }
     await ArchivioChiave.cancella();
+    // Nota 373 V41: al prossimo «Accedi con Google» si sceglie di nuovo l'account
+    await AccessoGoogle.esci();
   }
 }

@@ -80,5 +80,21 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Nota 373 V41: Accedi con Google (ID client iOS e del gestionale, pubblici) -->
+		<key>GIDClientID</key>
+		<string>597046259972-lp3jsmugv9dgqmfd7ueq380tehpmfirc.apps.googleusercontent.com</string>
+		<key>GIDServerClientID</key>
+		<string>597046259972-rch4e02d5v169nlfagbcmlpk89lkcbuh.apps.googleusercontent.com</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.597046259972-lp3jsmugv9dgqmfd7ueq380tehpmfirc</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>
