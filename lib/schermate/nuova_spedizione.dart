@@ -862,7 +862,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
   Widget _pulsanteBordo(String testo, VoidCallback? azione, {IconData? icona}) => OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
           foregroundColor: Stile.verde,
-          side: const BorderSide(color: Stile.verde),
+          side: BorderSide(color: Stile.bordoVerde),
           shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
           minimumSize: const Size.fromHeight(44),
         ),
@@ -964,6 +964,7 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         style: SegmentedButton.styleFrom(
           selectedBackgroundColor: Stile.verdePulsanti,
           selectedForegroundColor: Colors.white,
+          side: BorderSide(color: Stile.grigio.withValues(alpha: 0.35)), // nota 390: bordo piu' tenue
           shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
         ),
         showSelectedIcon: false,
@@ -1098,10 +1099,16 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
                 child: ListTile(
                   contentPadding: const EdgeInsets.only(left: 4, right: 16),
                   title: Text('${s['nome'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle:
-                      s['iva_inclusa'] == true ? Text(t.t('iva_inclusa'), style: const TextStyle(fontSize: 11)) : null,
-                  trailing: Text(_euro(s['totale'] as num?),
-                      style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
+                  // Nota 390: «IVA incl.» sotto l'importo, non sotto il nome
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(_euro(s['totale'] as num?),
+                          style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600, fontSize: 16)),
+                      if (s['iva_inclusa'] == true) Text(t.t('iva_inclusa'), style: const TextStyle(fontSize: 11)),
+                    ],
+                  ),
                   onTap: () => setState(() {
                     _servizio = s;
                     _puntoMittente = null;
@@ -1217,9 +1224,11 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
         Text('${t.t('porta_al_punto')} ${_puntoMittente?['name'] ?? ''}, ${_puntoMittente?['address'] ?? ''}',
             style: const TextStyle(fontSize: 14)),
       if (!_portaAlPunto) ...[
-      Text(t.t('vuoi_ritiro'), style: TextStyle(color: Stile.grigio)),
-      Row(children: [
-        Expanded(
+      // Nota 390: domanda e Si/No centrati
+      Text(t.t('vuoi_ritiro'), textAlign: TextAlign.center, style: TextStyle(color: Stile.grigio)),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SizedBox(
+          width: 130,
           child: RadioListTile<bool>(
             contentPadding: EdgeInsets.zero,
             activeColor: Stile.verde,
@@ -1232,7 +1241,8 @@ class _SchermataNuovaSpedizioneState extends State<SchermataNuovaSpedizione> {
             }),
           ),
         ),
-        Expanded(
+        SizedBox(
+          width: 130,
           child: RadioListTile<bool>(
             contentPadding: EdgeInsets.zero,
             activeColor: Stile.verde,

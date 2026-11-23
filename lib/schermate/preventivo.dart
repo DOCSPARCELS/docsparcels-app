@@ -566,7 +566,7 @@ class _SchermataPreventivoState extends State<SchermataPreventivo> {
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: Stile.verde,
-                side: const BorderSide(color: Stile.verde),
+                side: BorderSide(color: Stile.bordoVerde),
                 shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
                 minimumSize: const Size.fromHeight(44),
               ),

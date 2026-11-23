@@ -21,6 +21,12 @@ class Stile {
   static const Color rossoLeggero = Color(0xFFE57373);
   static const BorderRadius angoli = BorderRadius.all(Radius.circular(2));
 
+  /// Nota 390: bordo dei pulsanti con contorno (Indietro e simili), piu' tenue del verde pieno
+  static Color get bordoVerde => verde.withValues(alpha: 0.5);
+
+  /// Nota 390: sfondo della home nel tema chiaro, un po' piu' scuro del bianco
+  static const Color sfondoHomeChiaro = Color(0xFFD9DDE1); // V4: ancora piu' scuro
+
   /// Fondo del tema scuro (lo usano ancora le pagine sempre scure, come il pagamento myPOS)
   static const Color sfondo = Color(0xFF1E1E1E);
 
@@ -86,7 +92,7 @@ class Stile {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: verde,
-          side: const BorderSide(color: verde),
+          side: BorderSide(color: bordoVerde), // nota 390: bordo piu' tenue
           shape: const RoundedRectangleBorder(borderRadius: angoli),
         ),
       ),

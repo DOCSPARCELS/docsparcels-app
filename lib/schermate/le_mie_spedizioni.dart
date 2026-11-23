@@ -333,12 +333,16 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
     );
   }
 
-  /// Bozze, richieste e spedizioni da pagare: «In lavorazione» in arancio a destra (nota 373 V5)
-  static bool _inLavorazione(Map<String, dynamic> r) =>
-      r['da_pagare'] == true || const {'bozza', 'da_completare', 'richiesta'}.contains('${r['tipo']}');
+  /// Richieste inviate e spedizioni da pagare: «In lavorazione» in arancio a destra (nota 373 V5).
+  /// Nota 390: le bozze mai inviate non sono «in lavorazione» ma «Bozza», in grigio.
+  static bool _inLavorazione(Map<String, dynamic> r) => r['da_pagare'] == true || '${r['tipo']}' == 'richiesta';
+
+  static bool _bozza(Map<String, dynamic> r) =>
+      r['da_pagare'] != true && const {'bozza', 'da_completare'}.contains('${r['tipo']}');
 
   Widget _riga(Testi t, Map<String, dynamic> r) {
     final lavorazione = _inLavorazione(r);
+    final bozza = _bozza(r);
     final colore = _colore(r['colore'] as String?);
     final totale = r['totale'] as num?;
     return InkWell(
@@ -404,7 +408,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
               ],
             ),
             // stato sotto l'AWB, a destra, piu' scuro (nel tema chiaro); se e' lungo va su due righe
-            if (!lavorazione && '${r['stato'] ?? ''}'.trim().isNotEmpty) ...[
+            if (!lavorazione && !bozza && '${r['stato'] ?? ''}'.trim().isNotEmpty) ...[
               const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerRight,
@@ -420,6 +424,14 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                         style: TextStyle(color: _scuro(colore), fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ),
+              ),
+            ],
+            if (bozza) ...[
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(t.t('stato_bozza'),
+                    style: TextStyle(color: Stile.grigio, fontSize: 12, fontWeight: FontWeight.w600)),
               ),
             ],
             if (lavorazione) ...[

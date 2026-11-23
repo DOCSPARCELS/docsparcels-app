@@ -419,7 +419,7 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Stile.verde,
-                  side: const BorderSide(color: Stile.verde),
+                  side: BorderSide(color: Stile.bordoVerde),
                   shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
                   minimumSize: const Size.fromHeight(44),
                   alignment: Alignment.centerLeft,

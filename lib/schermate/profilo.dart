@@ -139,6 +139,8 @@ class SchermataProfiloState extends State<SchermataProfilo> {
   Widget build(BuildContext context) {
     final t = Testi.di(context);
     return Scaffold(
+      // Nota 390: nel tema chiaro lo sfondo della home e' un po' piu' scuro del bianco
+      backgroundColor: context.temaScuro ? null : Stile.sfondoHomeChiaro,
       appBar: barraApp(context, azioni: [
         Padding(
           padding: const EdgeInsets.only(right: 12),
@@ -176,6 +178,30 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     );
   }
 
+  /// Nota 390 (V4): le quattro voci non hanno riquadro ne' angoli, in tutti e due i temi:
+  /// una zona chiara che sfuma fino a sparire prima dei bordi e si fonde con lo sfondo.
+  Widget _voceHome({required VoidCallback onTap, required Widget child}) {
+    final luce = context.temaScuro ? Colors.white.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.9);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            // raggio 0,5 = la sfumatura arriva a zero prima dei bordi: niente forma quadrata
+            gradient: RadialGradient(
+              radius: 0.5,
+              colors: [luce, luce.withValues(alpha: luce.a * 0.45), luce.withValues(alpha: 0)],
+              stops: const [0.0, 0.55, 1.0],
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   Widget _contenuto(Testi t) {
     final c = context.colori;
     final nome = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).first;
@@ -204,8 +230,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         childAspectRatio: 1.05,
         children: [
           for (final (icona, testo, schermata) in voci)
-            CardApp(
-              bordo: false, // nota 373 V23
+            _voceHome(
               onTap: () => _apri(schermata),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                 CircleAvatar(
@@ -232,7 +257,8 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       if (prepagato) ...[
         const SizedBox(height: 12),
         CardApp(
-          // nota 373 V8: apre direttamente la scheda Credito
+          // nota 373 V8: apre direttamente la scheda Credito; nota 390 V4: senza bordo nel tema scuro
+          bordo: !context.temaScuro,
           onTap: () => _apri(_sezionePagamenti(scheda: 1)),
           child: Row(children: [
             Expanded(child: Text(t.t('saldo'), style: TextStyle(color: Stile.grigio))),

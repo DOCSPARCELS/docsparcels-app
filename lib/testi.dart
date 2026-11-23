@@ -93,7 +93,7 @@ class Testi {
       'punto_ritiro': 'Dove ritirare (es. reception)',
       'note_ritiro': 'Note per il corriere',
       'totale': 'Totale',
-      'come_paghi': 'Come paghi',
+      'come_paghi': 'Pagamento',
       'paga_credito': 'Credito',
       'credito_residuo': 'Credito disponibile',
       'paga_carta': 'Carta',
@@ -145,6 +145,7 @@ class Testi {
       'filtro_transito': 'In transito',
       'filtro_consegnate': 'Consegnate',
       'filtro_bozze': 'Bozze',
+      'stato_bozza': 'Bozza', // nota 390
       'cerca_spedizione': 'Cerca per MOS, AWB, destinatario o città',
       'nessuna_spedizione': 'Nessuna spedizione',
       'da_completare_sul_sito': 'Questa spedizione va completata dal sito, nell\'area cliente.',
@@ -357,6 +358,7 @@ class Testi {
       'errore_generico': 'Qualcosa non è andato, riprova',
     },
     'en': {
+      'stato_bozza': 'Draft', // nota 390
       'domanda_biometria': 'Do you want to use Face ID or your fingerprint to sign in next time?',
       'motivo_sblocco': "Unlock to open Doc's & Parcels",
       'sblocco_titolo': 'Verification required',
@@ -423,7 +425,7 @@ class Testi {
       'punto_ritiro': 'Where to pick up (e.g. reception)',
       'note_ritiro': 'Notes for the courier',
       'totale': 'Total',
-      'come_paghi': 'How you pay',
+      'come_paghi': 'Payment',
       'paga_credito': 'Credit',
       'credito_residuo': 'Available credit',
       'paga_carta': 'Card',
@@ -687,6 +689,7 @@ class Testi {
       'errore_generico': 'Something went wrong, try again',
     },
     'es': {
+      'stato_bozza': 'Borrador', // nota 390
       'domanda_biometria': '¿Quieres usar Face ID o la huella para entrar las próximas veces?',
       'motivo_sblocco': "Desbloquea para entrar en Doc's & Parcels",
       'sblocco_titolo': 'Verificación necesaria',
@@ -753,7 +756,7 @@ class Testi {
       'punto_ritiro': 'Dónde recoger (p. ej. recepción)',
       'note_ritiro': 'Notas para el mensajero',
       'totale': 'Total',
-      'come_paghi': 'Cómo pagas',
+      'come_paghi': 'Pago',
       'paga_credito': 'Crédito',
       'credito_residuo': 'Crédito disponible',
       'paga_carta': 'Tarjeta',
@@ -1017,6 +1020,7 @@ class Testi {
       'errore_generico': 'Algo ha fallado, inténtalo de nuevo',
     },
     'fr': {
+      'stato_bozza': 'Brouillon', // nota 390
       'domanda_biometria': "Voulez-vous utiliser Face ID ou votre empreinte pour vous connecter la prochaine fois ?",
       'motivo_sblocco': "Déverrouillez pour ouvrir Doc's & Parcels",
       'sblocco_titolo': 'Vérification requise',
@@ -1083,7 +1087,7 @@ class Testi {
       'punto_ritiro': 'Où enlever (ex. accueil)',
       'note_ritiro': 'Notes pour le transporteur',
       'totale': 'Total',
-      'come_paghi': 'Comment tu paies',
+      'come_paghi': 'Paiement',
       'paga_credito': 'Crédit',
       'credito_residuo': 'Crédit disponible',
       'paga_carta': 'Carte',
@@ -1347,6 +1351,7 @@ class Testi {
       'errore_generico': "Une erreur s'est produite, réessayez",
     },
     'de': {
+      'stato_bozza': 'Entwurf', // nota 390
       'domanda_biometria': 'Möchten Sie beim nächsten Mal Face ID oder Ihren Fingerabdruck zum Anmelden verwenden?',
       'motivo_sblocco': "Entsperren, um Doc's & Parcels zu öffnen",
       'sblocco_titolo': 'Bestätigung erforderlich',
@@ -1413,7 +1418,7 @@ class Testi {
       'punto_ritiro': 'Wo abholen (z. B. Empfang)',
       'note_ritiro': 'Hinweise für den Kurier',
       'totale': 'Summe',
-      'come_paghi': 'Wie du zahlst',
+      'come_paghi': 'Zahlung',
       'paga_credito': 'Guthaben',
       'credito_residuo': 'Verfügbares Guthaben',
       'paga_carta': 'Karte',

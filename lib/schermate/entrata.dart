@@ -188,7 +188,7 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Stile.verde,
-                    side: const BorderSide(color: Stile.verde),
+                    side: BorderSide(color: Stile.bordoVerde),
                     shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
                     minimumSize: const Size.fromHeight(48),
                   ),
