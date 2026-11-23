@@ -20,4 +20,10 @@ class ArchivioChiave {
   static Future<String?> ultimoLogin() => _archivio.read(key: 'ultimo_login');
 
   static Future<void> salvaLogin(String login) => _archivio.write(key: 'ultimo_login', value: login);
+
+  /// Nota 373 V43: con cosa si e' entrati (password, google, apple): decide come si
+  /// conferma l'eliminazione dell'account.
+  static Future<String?> accessoCon() => _archivio.read(key: 'accesso_con');
+
+  static Future<void> salvaAccessoCon(String come) => _archivio.write(key: 'accesso_con', value: come);
 }

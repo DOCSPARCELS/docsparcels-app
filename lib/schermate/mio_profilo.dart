@@ -3,6 +3,9 @@ import 'package:image_picker/image_picker.dart';
 
 import '../config.dart';
 import '../servizi/api.dart';
+import '../servizi/apple.dart';
+import '../servizi/chiave.dart';
+import '../servizi/google.dart';
 import '../servizi/lingua.dart';
 import '../stile.dart';
 import '../widget/barra.dart';
@@ -205,6 +208,13 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
   }
 
   Future<void> _eliminaAccount() async {
+    // Nota 373 V43: chi e' entrato con Apple o Google conferma con loro, senza password
+    String? accessoCon;
+    try {
+      accessoCon = await ArchivioChiave.accessoCon();
+    } catch (_) {}
+    if (!mounted) return;
+    if (accessoCon == 'apple' || accessoCon == 'google') return _eliminaAccountConferma(accessoCon!);
     final t = Testi.di(context);
     final password = TextEditingController();
     final ok = await showDialog<bool>(
@@ -230,6 +240,42 @@ class _SchermataMioProfiloState extends State<SchermataMioProfilo> {
       Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SchermataEntrata()), (_) => false);
     } on ErroreApi catch (e) {
       if (mounted) await _esitoErrore(context, e);
+    }
+  }
+
+  /// Eliminazione confermata con Apple o Google (nota 373 V43). Per Apple il gestionale
+  /// revoca anche l'accesso presso Apple.
+  Future<void> _eliminaAccountConferma(String fornitore) async {
+    final t = Testi.di(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        title: Text(t.t('elimina_account'), textAlign: TextAlign.center),
+        content: Text(t.t(fornitore == 'apple' ? 'elimina_account_testo_apple' : 'elimina_account_testo_google'),
+            textAlign: TextAlign.center),
+        actions: [_dueBottoni(c, t.t('annulla'), t.t('elimina'), rosso: true)],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      Map<String, dynamic>? credenziali;
+      if (fornitore == 'apple') {
+        final c = await AccessoApple.credenziali();
+        if (c != null) credenziali = {'id_token': c.gettone, 'codice': c.codice};
+      } else {
+        final gettone = await AccessoGoogle.gettone();
+        if (gettone != null) credenziali = {'id_token': gettone};
+      }
+      if (credenziali == null || !mounted) return;
+      await Api.eliminaAccountConferma(fornitore, credenziali);
+      await Api.esci();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SchermataEntrata()), (_) => false);
+    } on ErroreApi catch (e) {
+      if (mounted) await _esitoErrore(context, e);
+    } catch (_) {
+      if (mounted) _avviso(context, t.errore('generico'));
     }
   }
 

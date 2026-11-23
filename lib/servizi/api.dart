@@ -92,6 +92,7 @@ class Api {
         ));
     final dati = _risposta(r);
     await ArchivioChiave.salva(dati['chiave'] as String);
+    await ArchivioChiave.salvaAccessoCon('password');
     return (dati['utente'] as Map<String, dynamic>?) ?? {};
   }
 
@@ -100,10 +101,15 @@ class Api {
   static Future<Map<String, dynamic>> entraGoogle(String gettone, String lingua) =>
       _entraEsterno('/app/api/entra-google', {'id_token': gettone, 'lingua': lingua});
 
-  /// POST /app/api/collega-google (nota 373 V41): collega l'account Google con email e password, ed entra.
-  static Future<Map<String, dynamic>> collegaGoogle(String gettone, String login, String password, String lingua) =>
-      _entraEsterno('/app/api/collega-google',
-          {'id_token': gettone, 'login': login.trim(), 'password': password, 'lingua': lingua});
+  /// POST /app/api/entra-apple (nota 373 V43, solo iPhone): gettone, codice e nome di Apple.
+  static Future<Map<String, dynamic>> entraApple(Map<String, dynamic> credenziali, String lingua) =>
+      _entraEsterno('/app/api/entra-apple', {...credenziali, 'lingua': lingua});
+
+  /// POST /app/api/collega-<fornitore> (google o apple): collega l'account con email e password, ed entra.
+  static Future<Map<String, dynamic>> collega(
+          String fornitore, Map<String, dynamic> credenziali, String login, String password, String lingua) =>
+      _entraEsterno('/app/api/collega-$fornitore',
+          {...credenziali, 'login': login.trim(), 'password': password, 'lingua': lingua});
 
   static Future<Map<String, dynamic>> _entraEsterno(String percorso, Map<String, dynamic> corpo) async {
     final r = await _manda(() async => http.post(
@@ -118,6 +124,7 @@ class Api {
         ));
     final dati = _risposta(r);
     await ArchivioChiave.salva(dati['chiave'] as String);
+    await ArchivioChiave.salvaAccessoCon(percorso.contains('apple') ? 'apple' : 'google');
     return (dati['utente'] as Map<String, dynamic>?) ?? {};
   }
 
@@ -480,6 +487,12 @@ class Api {
   /// Elimina l'account (serve la password). L'account viene disattivato subito.
   static Future<void> eliminaAccount(String password) async {
     await _postCorpo('/app/api/elimina_account', {'password': password});
+  }
+
+  /// Nota 373 V43: chi e' entrato con Apple o Google conferma l'eliminazione con loro.
+  /// Per Apple il gestionale revoca anche l'accesso presso Apple.
+  static Future<void> eliminaAccountConferma(String fornitore, Map<String, dynamic> credenziali) async {
+    await _postCorpo('/app/api/elimina_account', {...credenziali, 'fornitore': fornitore});
   }
 
   /// Indirizzo completo di una pagina del gestionale (pagamento myPOS).

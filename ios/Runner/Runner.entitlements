@@ -5,5 +5,10 @@
 	<!-- Notifiche push (Firebase / APNs): versione per TestFlight e App Store -->
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- Nota 373 V43: Accedi con Apple -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

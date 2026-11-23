@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../servizi/api.dart';
+import '../servizi/apple.dart';
 import '../servizi/biometria.dart';
 import '../servizi/google.dart';
 import 'collega_account.dart';
@@ -27,7 +29,8 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
   final _login = TextEditingController();
   final _password = TextEditingController();
   bool _attesa = false;
-  bool _attesaGoogle = false;
+  /// 'google' o 'apple' mentre si entra con loro
+  String? _esterno;
   bool _nascosta = true;
   String? _errore;
 
@@ -71,23 +74,35 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
     }
   }
 
-  /// Accedi con Google (nota 373 V41). Se l'account Google non e' ancora di un cliente,
-  /// si collega una volta con email e password (SchermataCollegaAccount).
-  Future<void> _entraConGoogle() async {
+  /// Accedi con Google (nota 373 V41) o con Apple (V43, solo iPhone). Se l'account non e'
+  /// ancora di un cliente, si collega una volta con email e password (SchermataCollegaAccount).
+  Future<void> _entraConEsterno(String fornitore) async {
     final testi = Testi.di(context);
     setState(() {
-      _attesaGoogle = true;
+      _esterno = fornitore;
       _errore = null;
     });
     try {
-      final gettone = await AccessoGoogle.gettone();
-      if (gettone == null || !mounted) return;
+      Map<String, dynamic>? credenziali;
+      if (fornitore == 'apple') {
+        final c = await AccessoApple.credenziali();
+        if (c != null) credenziali = {'id_token': c.gettone, 'codice': c.codice, 'nome': c.nome};
+      } else {
+        final gettone = await AccessoGoogle.gettone();
+        if (gettone != null) credenziali = {'id_token': gettone};
+      }
+      if (credenziali == null || !mounted) return;
       try {
-        await Api.entraGoogle(gettone, testi.lingua);
+        if (fornitore == 'apple') {
+          await Api.entraApple(credenziali, testi.lingua);
+        } else {
+          await Api.entraGoogle(credenziali['id_token'] as String, testi.lingua);
+        }
       } on ErroreApi catch (e) {
         if (e.codice != 'da_collegare' || !mounted) rethrow;
-        final collegato = await Navigator.of(context)
-            .push<bool>(MaterialPageRoute(builder: (_) => SchermataCollegaAccount(gettone: gettone)));
+        final dati = credenziali;
+        final collegato = await Navigator.of(context).push<bool>(MaterialPageRoute(
+            builder: (_) => SchermataCollegaAccount(fornitore: fornitore, credenziali: dati)));
         if (collegato != true) return;
       }
       if (!mounted) return;
@@ -100,13 +115,38 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
         setState(() => _errore =
             testi.t(e.codice == 'non_disponibile' ? 'google_non_disponibile' : 'errore_google_non_valido'));
       }
+    } on ErroreApple catch (e) {
+      debugPrint('🔐 Accedi con Apple: $e');
+      if (mounted) {
+        setState(() => _errore =
+            testi.t(e.codice == 'non_disponibile' ? 'apple_non_disponibile' : 'errore_apple_non_valido'));
+      }
     } on ErroreApi catch (e) {
       if (mounted) setState(() => _errore = testi.errore(e.codice));
     } catch (_) {
       if (mounted) setState(() => _errore = testi.errore('generico'));
     } finally {
-      if (mounted) setState(() => _attesaGoogle = false);
+      if (mounted) setState(() => _esterno = null);
     }
+  }
+
+  /// Pulsante Apple (nota 373 V43): quello ufficiale, nero nel tema chiaro e bianco nel tema scuro
+  Widget _pulsanteApple(Testi testi) {
+    final occupato = _attesa || _esterno != null;
+    if (_esterno == 'apple') {
+      return const SizedBox(
+          height: 48, child: Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))));
+    }
+    return IgnorePointer(
+      ignoring: occupato,
+      child: SignInWithAppleButton(
+        text: testi.t('accedi_apple'),
+        height: 48,
+        borderRadius: Stile.angoli,
+        style: context.temaScuro ? SignInWithAppleButtonStyle.white : SignInWithAppleButtonStyle.black,
+        onPressed: () => _entraConEsterno('apple'),
+      ),
+    );
   }
 
   /// Pulsante Google: bianco col bordo grigio nel tema chiaro, scuro nel tema scuro (regole di Google)
@@ -120,8 +160,8 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
         shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
         minimumSize: const Size.fromHeight(48),
       ),
-      onPressed: _attesa || _attesaGoogle ? null : _entraConGoogle,
-      child: _attesaGoogle
+      onPressed: _attesa || _esterno != null ? null : () => _entraConEsterno('google'),
+      child: _esterno == 'google'
           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
           : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Image.asset('assets/immagini/google_g.png', width: 20, height: 20),
@@ -264,7 +304,7 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   ],
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _attesa || _attesaGoogle ? null : _entra,
+                    onPressed: _attesa || _esterno != null ? null : _entra,
                     child: _attesa
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(testi.t('entra')),
@@ -289,6 +329,8 @@ class _SchermataEntrataState extends State<SchermataEntrata> {
                   ]),
                   const SizedBox(height: 16),
                   _pulsanteGoogle(testi),
+                  // Nota 373 V43: Apple solo su iPhone
+                  if (AccessoApple.previsto) ...[const SizedBox(height: 12), _pulsanteApple(testi)],
                   const SizedBox(height: 24),
                   // Tema (nota 373 V4): la stessa scelta di «Il mio profilo» → «Aspetto»
                   const SceltaTema(),

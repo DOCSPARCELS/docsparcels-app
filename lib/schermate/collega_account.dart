@@ -4,14 +4,18 @@ import '../servizi/api.dart';
 import '../stile.dart';
 import '../testi.dart';
 
-/// Collega il tuo account (nota 373 V41): l'account Google non e' ancora di un cliente
-/// (email diversa da quella del gestionale). Email e password si scrivono una volta
-/// sola; poi si entra con Google. Ritorna true se il collegamento e' riuscito.
+/// Collega il tuo account (nota 373 V41, Apple dalla V43): l'account Google o Apple non e'
+/// ancora di un cliente (email diversa da quella del gestionale, o nascosta da Apple).
+/// Email e password si scrivono una volta sola; poi si entra con Google o Apple.
+/// Ritorna true se il collegamento e' riuscito.
 class SchermataCollegaAccount extends StatefulWidget {
-  const SchermataCollegaAccount({super.key, required this.gettone});
+  const SchermataCollegaAccount({super.key, required this.fornitore, required this.credenziali});
 
-  /// Gettone Google appena ricevuto: vale circa un'ora
-  final String gettone;
+  /// 'google' o 'apple'
+  final String fornitore;
+
+  /// Quello che si manda al gestionale: id_token (e per Apple codice e nome)
+  final Map<String, dynamic> credenziali;
 
   @override
   State<SchermataCollegaAccount> createState() => _SchermataCollegaAccountState();
@@ -38,7 +42,7 @@ class _SchermataCollegaAccountState extends State<SchermataCollegaAccount> {
       _errore = null;
     });
     try {
-      await Api.collegaGoogle(widget.gettone, _login.text, _password.text, testi.lingua);
+      await Api.collega(widget.fornitore, widget.credenziali, _login.text, _password.text, testi.lingua);
       if (mounted) Navigator.of(context).pop(true);
     } on ErroreApi catch (e) {
       if (mounted) setState(() => _errore = testi.errore(e.codice));
@@ -63,7 +67,7 @@ class _SchermataCollegaAccountState extends State<SchermataCollegaAccount> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(testi.t('collega_spiegazione'),
+                  Text(testi.t(widget.fornitore == 'apple' ? 'collega_spiegazione_apple' : 'collega_spiegazione'),
                       textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: context.colori.testo)),
                   const SizedBox(height: 24),
                   TextField(
