@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../servizi/api.dart';
 import '../servizi/notifiche.dart';
@@ -141,15 +142,27 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     return Scaffold(
       // Nota 390: nel tema chiaro lo sfondo della home e' un po' piu' scuro del bianco
       backgroundColor: context.temaScuro ? null : Stile.sfondoHomeChiaro,
-      appBar: barraApp(context, azioni: [
+      appBar: barraApp(context,
+          fondo: context.temaScuro ? context.colori.fondo : Stile.sfondoHomeChiaro, azioni: [
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: _io == null ? null : () => _apri(const SchermataMioProfilo()),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: Stile.verdePulsanti,
+            // 23.11.26: cerchio dell'avatar col bordo sfumato, come i cerchi delle voci
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    for (final a in const [1.0, 1.0, 0.7, 0.3, 0.0]) Stile.verdePulsanti.withValues(alpha: a),
+                  ],
+                  stops: const [0.0, 0.72, 0.84, 0.93, 1.0],
+                ),
+              ),
+              alignment: Alignment.center,
               child: Text(_iniziali, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             ),
           ),
@@ -181,24 +194,71 @@ class SchermataProfiloState extends State<SchermataProfilo> {
   /// Nota 390 (V4): le quattro voci non hanno riquadro ne' angoli, in tutti e due i temi:
   /// una zona chiara che sfuma fino a sparire prima dei bordi e si fonde con lo sfondo.
   Widget _voceHome({required VoidCallback onTap, required Widget child}) {
-    final luce = context.temaScuro ? Colors.white.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.9);
+    final luce = Colors.white.withValues(alpha: 0.9);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Ink(
-          decoration: BoxDecoration(
-            // raggio 0,5 = la sfumatura arriva a zero prima dei bordi: niente forma quadrata
-            gradient: RadialGradient(
-              radius: 0.5,
-              colors: [luce, luce.withValues(alpha: luce.a * 0.45), luce.withValues(alpha: 0)],
-              stops: const [0.0, 0.55, 1.0],
-            ),
-          ),
+          // Tema scuro (richiesta di Luca 23.11.26): nessun disco o alone dietro le voci
+          decoration: context.temaScuro
+              ? null
+              : BoxDecoration(
+                  // raggio 0,5 = la sfumatura arriva a zero prima dei bordi: niente forma quadrata
+                  gradient: RadialGradient(
+                    radius: 0.5,
+                    colors: [luce, luce.withValues(alpha: luce.a * 0.45), luce.withValues(alpha: 0)],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                ),
           child: child,
         ),
       ),
+    );
+  }
+
+  /// 23.11.26: le icone della home con la stessa sfumatura del globo del logo
+  /// (verde acqua chiaro in alto a sinistra, verde smeraldo scuro in basso a destra)
+  /// Piene e con il bordo d'ombra scuro in basso a destra, come i continenti del globo:
+  /// sembrano immagini, non disegni a linee.
+  static Widget _comeIlGlobo(Widget icona) => Stack(clipBehavior: Clip.none, children: [
+        Transform.translate(
+          offset: const Offset(1.6, 1.6),
+          child: ColorFiltered(
+            colorFilter: const ColorFilter.mode(Color(0xFF002E25), BlendMode.srcIn),
+            child: icona,
+          ),
+        ),
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (area) => const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1BE3BA), Color(0xFF0FC9A4), Color(0xFF008369), Color(0xFF00624F)],
+            stops: [0.0, 0.35, 0.75, 1.0],
+          ).createShader(area),
+          child: icona,
+        ),
+      ]);
+
+  /// Sfuma solo gli ultimi [larghezza] pixel di ogni lato: il riquadro resta rettangolare
+  static Widget _bordiSfumati(Widget figlio, {double larghezza = 10}) {
+    Shader bordo(Rect area, bool orizzontale) {
+      final lato = orizzontale ? area.width : area.height;
+      final f = lato <= 0 ? 0.0 : (larghezza / lato).clamp(0.0, 0.5);
+      return LinearGradient(
+        begin: orizzontale ? Alignment.centerLeft : Alignment.topCenter,
+        end: orizzontale ? Alignment.centerRight : Alignment.bottomCenter,
+        colors: const [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+        stops: [0.0, f, 1 - f, 1.0],
+      ).createShader(area);
+    }
+
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (area) => bordo(area, true),
+      child: ShaderMask(blendMode: BlendMode.dstIn, shaderCallback: (area) => bordo(area, false), child: figlio),
     );
   }
 
@@ -207,19 +267,25 @@ class SchermataProfiloState extends State<SchermataProfilo> {
     final nome = '${_io?['nome_completo'] ?? ''}'.trim().split(RegExp(r'\s+')).first;
     // Nota 373 V18: in basso a sinistra «Prenota ritiro», a destra «Le mie spedizioni»
     final voci = [
-      (const Icon(Icons.public) as Widget, t.t('nuova_spedizione'), const SchermataNuovaSpedizione() as Widget),
-      (const Icon(Icons.calculate_outlined) as Widget, t.t('preventivo_veloce'), const SchermataPreventivo() as Widget),
-      (const IconaRitiro(size: 34) as Widget, t.t('prenota_ritiro'), const SchermataPrenotaRitiro() as Widget),
-      (const Icon(Icons.list_alt_outlined) as Widget, t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget),
+      // 23.11.26: Nuova spedizione col globo del logo (nei suoi colori); le altre Material Symbols
+      // col tratto sottile (le icone Material ingrandite sembravano in grassetto)
+      (Image.asset('assets/immagini/globo_avvio_android12.png', width: 80, height: 80) as Widget,
+          t.t('home_spedizione'), const SchermataNuovaSpedizione() as Widget),
+      (_comeIlGlobo(const Icon(Symbols.calculate, fill: 1, weight: 500)), t.t('home_preventivo'), const SchermataPreventivo() as Widget),
+      (_comeIlGlobo(const IconaRitiro(size: 48)), t.t('prenota_ritiro'), const SchermataPrenotaRitiro() as Widget),
+      (_comeIlGlobo(const Icon(Symbols.list_alt, fill: 1, weight: 500)), t.t('le_mie_spedizioni'), const SchermataLeMieSpedizioni() as Widget),
     ];
     final prepagato = _credito?['attivo'] == true;
     return ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 24), children: [
-      Text('${t.t('ciao')} $nome', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: c.testo)),
+      // 23.11.26: saluto e codice cliente centrati
+      Text('${t.t('ciao')} $nome',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: c.testo)),
       const SizedBox(height: 4),
       Text.rich(TextSpan(children: [
         TextSpan(text: '${t.t('codice_cliente')} ', style: TextStyle(color: Stile.grigio)),
         TextSpan(text: '${_io?['codice'] ?? '-'}', style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
-      ])),
+      ]), textAlign: TextAlign.center),
       const SizedBox(height: 20),
       GridView.count(
         crossAxisCount: 2,
@@ -233,12 +299,35 @@ class SchermataProfiloState extends State<SchermataProfilo> {
             _voceHome(
               onTap: () => _apri(schermata),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: c.cerchioIcona,
-                  child: IconTheme.merge(
-                    data: IconThemeData(size: 28, color: context.temaScuro ? Colors.white : Stile.verdePulsanti),
-                    child: icona,
+                // 23.11.26: cerchio dietro l'icona un po' piu' grande e col bordo sfumato, in tutti e due
+                // i temi; nel chiaro il fondo del cerchio e' un po' piu' scuro
+                // il cerchio si disegna a 120 ma occupa 96: le scritte sotto restano dove sono
+                SizedBox(
+                  width: 96,
+                  height: 96,
+                  child: OverflowBox(
+                    maxWidth: 120,
+                    maxHeight: 120,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            for (final a in const [1.0, 1.0, 0.75, 0.35, 0.0])
+                              (context.temaScuro ? c.cerchioIcona : const Color(0xFFC6E2CD)).withValues(alpha: a),
+                          ],
+                          stops: const [0.0, 0.5, 0.72, 0.88, 1.0],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: IconTheme.merge(
+                        data: IconThemeData(
+                            size: 44, weight: 250, color: context.temaScuro ? Stile.verde : Stile.verdePulsanti),
+                        child: icona,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -256,16 +345,33 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       ),
       if (prepagato) ...[
         const SizedBox(height: 12),
-        CardApp(
-          // nota 373 V8: apre direttamente la scheda Credito; nota 390 V4: senza bordo nel tema scuro
-          bordo: !context.temaScuro,
-          onTap: () => _apri(_sezionePagamenti(scheda: 1)),
-          child: Row(children: [
-            Expanded(child: Text(t.t('saldo'), style: TextStyle(color: Stile.grigio))),
-            Text(euro((_credito?['saldo'] as num?) ?? 0, t.lingua),
-                style: const TextStyle(color: Stile.verde, fontSize: 22, fontWeight: FontWeight.w700)),
-          ]),
-        ),
+        // 23.11.26: riquadro del credito coi bordi leggermente sfumati (solo il fondo, le scritte no),
+        // largo quanto le quattro voci: dal bordo del cerchio di sinistra a quello di destra
+        LayoutBuilder(builder: (context, spazio) {
+          final rientro = ((spazio.maxWidth - 12) / 4 - 60).clamp(0.0, 80.0);
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: rientro),
+            child: Stack(children: [
+          Positioned.fill(child: _bordiSfumati(ColoredBox(color: context.colori.card))),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              // nota 373 V8: apre direttamente la scheda Credito
+              onTap: () => _apri(_sezionePagamenti(scheda: 1)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  // 23.11.26: stessa grandezza delle scritte delle quattro voci (16), colori di prima
+                  Expanded(child: Text(t.t('saldo'), style: TextStyle(color: Stile.grigio, fontSize: 16))),
+                  Text(euro((_credito?['saldo'] as num?) ?? 0, t.lingua),
+                      style: const TextStyle(color: Stile.verde, fontSize: 16, fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ),
+          ),
+        ]),
+          );
+        }),
       ],
       // Nota 373 V22: sempre, se il cliente ha fatture; con quante e quanto se ce ne sono da pagare
       if (_haFatture) ...[

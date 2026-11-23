@@ -48,6 +48,9 @@ class Testi {
       'saldo_non_attivo': 'Credito prepagato non attivo',
       'aggiorna': 'Aggiorna',
       'nuova_spedizione': 'Nuova spedizione',
+      // 23.11.26: scritte brevi delle voci della home
+      'home_spedizione': 'Spedizione',
+      'home_preventivo': 'Preventivo',
       'mittente': 'Mittente',
       'destinatario': 'Destinatario',
       'colli_titolo': 'Colli',
@@ -380,6 +383,9 @@ class Testi {
       'saldo_non_attivo': 'Prepaid credit not active',
       'aggiorna': 'Refresh',
       'nuova_spedizione': 'New shipment',
+      // 23.11.26: scritte brevi delle voci della home
+      'home_spedizione': 'Shipment',
+      'home_preventivo': 'Quote',
       'mittente': 'Sender',
       'destinatario': 'Recipient',
       'colli_titolo': 'Packages',
@@ -711,6 +717,9 @@ class Testi {
       'saldo_non_attivo': 'Crédito prepago no activo',
       'aggiorna': 'Actualizar',
       'nuova_spedizione': 'Nuevo envío',
+      // 23.11.26: scritte brevi delle voci della home
+      'home_spedizione': 'Envío',
+      'home_preventivo': 'Presupuesto',
       'mittente': 'Remitente',
       'destinatario': 'Destinatario',
       'colli_titolo': 'Bultos',
@@ -1042,6 +1051,9 @@ class Testi {
       'saldo_non_attivo': 'Crédit prépayé non actif',
       'aggiorna': 'Actualiser',
       'nuova_spedizione': 'Nouvel envoi',
+      // 23.11.26: scritte brevi delle voci della home
+      'home_spedizione': 'Envoi',
+      'home_preventivo': 'Devis',
       'mittente': 'Expéditeur',
       'destinatario': 'Destinataire',
       'colli_titolo': 'Colis',
@@ -1373,6 +1385,9 @@ class Testi {
       'saldo_non_attivo': 'Prepaid-Guthaben nicht aktiv',
       'aggiorna': 'Aktualisieren',
       'nuova_spedizione': 'Neue Sendung',
+      // 23.11.26: scritte brevi delle voci della home
+      'home_spedizione': 'Sendung',
+      'home_preventivo': 'Angebot',
       'mittente': 'Absender',
       'destinatario': 'Empfänger',
       'colli_titolo': 'Packstücke',

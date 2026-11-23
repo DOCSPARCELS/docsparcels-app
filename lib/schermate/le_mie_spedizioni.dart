@@ -430,8 +430,9 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
               const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerRight,
+                // 24.11.26: arancio come «In lavorazione» (Bozza = ancora modificabile, In lavorazione = inviata)
                 child: Text(t.t('stato_bozza'),
-                    style: TextStyle(color: Stile.grigio, fontSize: 12, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: _scuro(_arancio), fontSize: 12, fontWeight: FontWeight.w600)),
               ),
             ],
             if (lavorazione) ...[
