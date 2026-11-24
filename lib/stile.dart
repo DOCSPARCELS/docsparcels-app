@@ -25,7 +25,10 @@ class Stile {
   static Color get bordoVerde => verde.withValues(alpha: 0.5);
 
   /// Nota 390: sfondo della home nel tema chiaro, un po' piu' scuro del bianco
-  static const Color sfondoHomeChiaro = Color(0xFFD9DDE1); // V4: ancora piu' scuro
+  static const Color sfondoHomeChiaro = Colors.white; // 24.11.26: home chiara tutta bianca
+
+  /// 24.11.26: fondo grigio leggerissimo dei quadrati e del credito nella home chiara
+  static const Color voceHomeChiaro = Color(0xFFF4F5F6);
 
   /// Fondo del tema scuro (lo usano ancora le pagine sempre scure, come il pagamento myPOS)
   static const Color sfondo = Color(0xFF1E1E1E);

@@ -12,6 +12,7 @@ import '../widget/barra.dart';
 import '../testi.dart';
 import '../widget/scelta_nazione.dart';
 import 'entrata.dart';
+import 'nuova_spedizione.dart';
 import 'profilo.dart';
 import '../widget/scelta_tema.dart';
 import '../widget/scelta_lingua.dart';
@@ -617,9 +618,12 @@ class _SchermataRubricaState extends State<SchermataRubrica> {
     }
   }
 
+  /// 24.11.26: un contatto esistente si apre solo da leggere; il «+» apre il modulo vuoto
   Future<void> _apri({Map<String, dynamic>? contatto}) async {
     final cambiato = await Navigator.of(context).push<bool>(MaterialPageRoute(
-        builder: (_) => SchermataContatto(id: contatto?['id'] as int?, iniziale: contatto ?? const {}, propria: false)));
+        builder: (_) => contatto == null
+            ? const SchermataContatto(iniziale: {}, propria: false)
+            : SchermataContattoLettura(contatto: contatto)));
     if (cambiato == true) _carica();
   }
 
@@ -681,6 +685,121 @@ class _SchermataRubricaState extends State<SchermataRubrica> {
                       ),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------- contatto in lettura
+
+/// 24.11.26: dalla rubrica il contatto si apre solo da leggere, impostato come «La mia scheda»;
+/// la matita apre la modifica, il cestino lo elimina, sotto «Spedisci a questo indirizzo».
+class SchermataContattoLettura extends StatefulWidget {
+  const SchermataContattoLettura({super.key, required this.contatto});
+
+  final Map<String, dynamic> contatto;
+
+  @override
+  State<SchermataContattoLettura> createState() => _SchermataContattoLetturaState();
+}
+
+class _SchermataContattoLetturaState extends State<SchermataContattoLettura> {
+  late Map<String, dynamic> _c = widget.contatto;
+
+  /// Qualcosa e' cambiato: all'uscita la rubrica si ricarica
+  bool _cambiato = false;
+
+  int get _id => _c['id'] as int;
+
+  Future<void> _modifica() async {
+    final salvato = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => SchermataContatto(id: _id, iniziale: _c, propria: false)));
+    if (salvato != true || !mounted) return;
+    _cambiato = true;
+    try {
+      final nuovo = (await Api.rubrica()).where((c) => c['tipo'] != 'indirizzo' && c['id'] == _id).firstOrNull;
+      if (mounted && nuovo != null) setState(() => _c = nuovo);
+    } on ErroreApi catch (e) {
+      if (mounted) await _esitoErrore(context, e);
+    }
+  }
+
+  Future<void> _elimina() async {
+    final t = Testi.di(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        content: Text(t.t('conferma_elimina_contatto'), textAlign: TextAlign.center),
+        actions: [_dueBottoni(c, t.t('annulla'), t.t('elimina'), rosso: true)],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await Api.eliminaContatto(_id);
+      if (mounted) Navigator.of(context).pop(true);
+    } on ErroreApi catch (e) {
+      if (mounted) await _esitoErrore(context, e);
+    }
+  }
+
+  /// Apre la nuova spedizione col destinatario gia' compilato da questo contatto
+  void _spedisci() => Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SchermataNuovaSpedizione(daPreventivo: {
+            'dest': {'contatto': _c}
+          })));
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Testi.di(context);
+    final c = _c;
+    String v(String k) => _testo(c[k] ?? (k == 'resp_settore_op' ? c['contatto'] : null));
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (fatto, _) {
+        if (!fatto) Navigator.of(context).pop(_cambiato);
+      },
+      child: Scaffold(
+        appBar: barraApp(context, titolo: t.t('contatto')),
+        body: SafeArea(
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            Row(children: [
+              Expanded(child: _Titolo(Api.nomeProprio(v('societa_op')))),
+              IconButton(
+                  tooltip: t.t('modifica'), icon: const Icon(Icons.edit_outlined, color: Stile.verde), onPressed: _modifica),
+              IconButton(tooltip: t.t('elimina'), icon: Icon(Icons.delete_outline, color: Stile.grigio), onPressed: _elimina),
+            ]),
+            _Sottotitolo(t.t('indirizzo_operativo')),
+            _Riga(t.t('indirizzo'), _SchermataMioProfiloState._blocco(c, 'op'), stretta: true),
+            const SizedBox(height: 10),
+            _Riga(t.t('referente'), v('resp_settore_op'), stretta: true),
+            _Riga(t.t('telefono'), v('telefono_op'), stretta: true),
+            _Riga(t.t('email_campo'), v('email_op').toLowerCase(), stretta: true),
+            _Sottotitolo(t.t('ritiro_abituale')),
+            _Riga(t.t('mattino'),
+                _SchermataMioProfiloState._fascia(c['ritiro_ora_mattino_dalle'], c['ritiro_ora_mattino_alle']),
+                stretta: true),
+            _Riga(t.t('pomeriggio'),
+                _SchermataMioProfiloState._fascia(c['ritiro_ora_pomeriggio_dalle'], c['ritiro_ora_pomeriggio_alle']),
+                stretta: true),
+            _Riga(t.t('pronti_dalle'), v('ritiro_ora_pronti_dalle'), stretta: true),
+            _Riga(t.t('punto_ritiro'), v('ritiro_punto'), stretta: true),
+            _Riga(t.t('note_ritiro'), v('ritiro_istruzioni_note'), stretta: true),
+            const SizedBox(height: 28),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Stile.verdePulsanti,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              icon: const Icon(Icons.send_outlined),
+              label: Text(t.t('spedisci_a_contatto')),
+              onPressed: _spedisci,
+            ),
+          ]),
+        ),
       ),
     );
   }

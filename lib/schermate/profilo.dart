@@ -186,6 +186,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       ),
       bottomNavigationBar: BarraInBasso(
         attiva: 0,
+        codiceCliente: '${_io?['codice'] ?? ''}',
         apri: (schermata) => _apri(schermata),
       ),
     );
@@ -193,30 +194,20 @@ class SchermataProfiloState extends State<SchermataProfilo> {
 
   /// Nota 390 (V4): le quattro voci non hanno riquadro ne' angoli, in tutti e due i temi:
   /// una zona chiara che sfuma fino a sparire prima dei bordi e si fonde con lo sfondo.
-  Widget _voceHome({required VoidCallback onTap, required Widget child}) {
-    final luce = Colors.white.withValues(alpha: 0.9);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Ink(
-          // Tema scuro (richiesta di Luca 23.11.26): nessun disco o alone dietro le voci
-          decoration: context.temaScuro
-              ? null
-              : BoxDecoration(
-                  // raggio 0,5 = la sfumatura arriva a zero prima dei bordi: niente forma quadrata
-                  gradient: RadialGradient(
-                    radius: 0.5,
-                    colors: [luce, luce.withValues(alpha: luce.a * 0.45), luce.withValues(alpha: 0)],
-                    stops: const [0.0, 0.55, 1.0],
-                  ),
-                ),
-          child: child,
-        ),
-      ),
-    );
-  }
+  /// Margine ai lati dei quattro quadrati e del riquadro del credito (24.11.26)
+  /// 24.11.26 (2): rientro oltre i 16 della pagina, cosi' il margine esterno (16+8) e' uguale
+  /// allo spazio fra i quadrati e sotto di loro (_spazioVoci)
+  static const double _margineVoci = 8;
+  static const double _spazioVoci = 24;
+
+  Color get _fondoVoce => context.temaScuro ? context.colori.card : Stile.voceHomeChiaro;
+
+  /// 24.11.26: le quattro voci tornano quadrati, pieni, senza bordo ne' sfumatura
+  Widget _voceHome({required VoidCallback onTap, required Widget child}) => Material(
+        color: _fondoVoce,
+        borderRadius: Stile.angoli,
+        child: InkWell(borderRadius: Stile.angoli, onTap: onTap, child: child),
+      );
 
   /// 23.11.26: le icone della home con la stessa sfumatura del globo del logo
   /// (verde acqua chiaro in alto a sinistra, verde smeraldo scuro in basso a destra)
@@ -287,47 +278,30 @@ class SchermataProfiloState extends State<SchermataProfilo> {
         TextSpan(text: '${_io?['codice'] ?? '-'}', style: const TextStyle(color: Stile.verde, fontWeight: FontWeight.w600)),
       ]), textAlign: TextAlign.center),
       const SizedBox(height: 20),
-      GridView.count(
+      // 24.11.26: quadrati piu' piccoli di una volta, con un po' di margine ai lati
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _margineVoci),
+        child: GridView.count(
         crossAxisCount: 2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.05,
+        mainAxisSpacing: _spazioVoci,
+        crossAxisSpacing: _spazioVoci,
+        childAspectRatio: 1.15,
         children: [
           for (final (icona, testo, schermata) in voci)
             _voceHome(
               onTap: () => _apri(schermata),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                // 23.11.26: cerchio dietro l'icona un po' piu' grande e col bordo sfumato, in tutti e due
-                // i temi; nel chiaro il fondo del cerchio e' un po' piu' scuro
-                // il cerchio si disegna a 120 ma occupa 96: le scritte sotto restano dove sono
+                // 24.11.26: niente sfere dietro le icone, solo l'icona
                 SizedBox(
-                  width: 96,
-                  height: 96,
-                  child: OverflowBox(
-                    maxWidth: 120,
-                    maxHeight: 120,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            for (final a in const [1.0, 1.0, 0.75, 0.35, 0.0])
-                              (context.temaScuro ? c.cerchioIcona : const Color(0xFFC6E2CD)).withValues(alpha: a),
-                          ],
-                          stops: const [0.0, 0.5, 0.72, 0.88, 1.0],
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: IconTheme.merge(
-                        data: IconThemeData(
-                            size: 44, weight: 250, color: context.temaScuro ? Stile.verde : Stile.verdePulsanti),
-                        child: icona,
-                      ),
-                    ),
+                  height: 64,
+                  child: Center(
+                    child: IconTheme.merge(
+                  data: IconThemeData(
+                      size: 44, weight: 250, color: context.temaScuro ? Stile.verde : Stile.verdePulsanti),
+                  child: icona,
+                ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -343,19 +317,22 @@ class SchermataProfiloState extends State<SchermataProfilo> {
             ),
         ],
       ),
+      ),
       if (prepagato) ...[
-        const SizedBox(height: 12),
+        const SizedBox(height: _spazioVoci),
         // 23.11.26: riquadro del credito coi bordi leggermente sfumati (solo il fondo, le scritte no),
-        // largo quanto le quattro voci: dal bordo del cerchio di sinistra a quello di destra
+        // largo quanto i quattro quadrati (stesso margine ai lati)
         LayoutBuilder(builder: (context, spazio) {
-          final rientro = ((spazio.maxWidth - 12) / 4 - 60).clamp(0.0, 80.0);
+          const rientro = _margineVoci;
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: rientro),
+            // 24.11.26: fondo pieno come i quattro quadrati, senza sfumatura
             child: Stack(children: [
-          Positioned.fill(child: _bordiSfumati(ColoredBox(color: context.colori.card))),
           Material(
-            color: Colors.transparent,
+            color: _fondoVoce,
+            borderRadius: Stile.angoli,
             child: InkWell(
+              borderRadius: Stile.angoli,
               // nota 373 V8: apre direttamente la scheda Credito
               onTap: () => _apri(_sezionePagamenti(scheda: 1)),
               child: Padding(
@@ -539,9 +516,12 @@ class CardApp extends StatelessWidget {
   }
 }
 
-/// Barra in basso: Home, Spedizioni, Ritiri, Profilo.
+/// Barra in basso: Home, Spedizioni, Ritiri, Contatti (24.11.26: al posto di Profilo, che resta nell'avatar).
 class BarraInBasso extends StatelessWidget {
-  const BarraInBasso({super.key, required this.attiva, required this.apri});
+  const BarraInBasso({super.key, required this.attiva, required this.apri, this.codiceCliente = ''});
+
+  /// Per togliere dalla rubrica la propria scheda
+  final String codiceCliente;
 
   final int attiva;
   final void Function(Widget schermata) apri;
@@ -559,7 +539,7 @@ class BarraInBasso extends StatelessWidget {
           case 2:
             apri(const SchermataRitiri());
           case 3:
-            apri(const SchermataMioProfilo());
+            apri(SchermataRubrica(codiceCliente: codiceCliente));
         }
       },
       destinations: [
@@ -568,7 +548,8 @@ class BarraInBasso extends StatelessWidget {
         // nella barra il nome completo andrebbe su due righe: qui la sola prima parola
         // nota 373 V23: «Ritiri», apre l'elenco
         NavigationDestination(icon: const IconaRitiro(size: 28), label: t.t('ritiri')),
-        NavigationDestination(icon: const Icon(Icons.person_outline), label: t.t('profilo')),
+        NavigationDestination(
+            icon: const Icon(Icons.contacts_outlined), selectedIcon: const Icon(Icons.contacts), label: t.t('contatti')),
       ],
     );
   }

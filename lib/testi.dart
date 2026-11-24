@@ -149,6 +149,8 @@ class Testi {
       'filtro_consegnate': 'Consegnate',
       'filtro_bozze': 'Bozze',
       'stato_bozza': 'Bozza', // nota 390
+      'contatti': 'Contatti', // 24.11.26
+      'spedisci_a_contatto': 'Spedisci a questo indirizzo',
       'cerca_spedizione': 'Cerca per MOS, AWB, destinatario o città',
       'nessuna_spedizione': 'Nessuna spedizione',
       'da_completare_sul_sito': 'Questa spedizione va completata dal sito, nell\'area cliente.',
@@ -361,6 +363,8 @@ class Testi {
       'errore_generico': 'Qualcosa non è andato, riprova',
     },
     'en': {
+      'contatti': 'Contacts', // 24.11.26
+      'spedisci_a_contatto': 'Ship to this address',
       'stato_bozza': 'Draft', // nota 390
       'domanda_biometria': 'Do you want to use Face ID or your fingerprint to sign in next time?',
       'motivo_sblocco': "Unlock to open Doc's & Parcels",
@@ -695,6 +699,8 @@ class Testi {
       'errore_generico': 'Something went wrong, try again',
     },
     'es': {
+      'contatti': 'Contactos', // 24.11.26
+      'spedisci_a_contatto': 'Enviar a esta dirección',
       'stato_bozza': 'Borrador', // nota 390
       'domanda_biometria': '¿Quieres usar Face ID o la huella para entrar las próximas veces?',
       'motivo_sblocco': "Desbloquea para entrar en Doc's & Parcels",
@@ -1029,6 +1035,8 @@ class Testi {
       'errore_generico': 'Algo ha fallado, inténtalo de nuevo',
     },
     'fr': {
+      'contatti': 'Contacts', // 24.11.26
+      'spedisci_a_contatto': 'Expédier à cette adresse',
       'stato_bozza': 'Brouillon', // nota 390
       'domanda_biometria': "Voulez-vous utiliser Face ID ou votre empreinte pour vous connecter la prochaine fois ?",
       'motivo_sblocco': "Déverrouillez pour ouvrir Doc's & Parcels",
@@ -1363,6 +1371,8 @@ class Testi {
       'errore_generico': "Une erreur s'est produite, réessayez",
     },
     'de': {
+      'contatti': 'Kontakte', // 24.11.26
+      'spedisci_a_contatto': 'An diese Adresse senden',
       'stato_bozza': 'Entwurf', // nota 390
       'domanda_biometria': 'Möchten Sie beim nächsten Mal Face ID oder Ihren Fingerabdruck zum Anmelden verwenden?',
       'motivo_sblocco': "Entsperren, um Doc's & Parcels zu öffnen",
