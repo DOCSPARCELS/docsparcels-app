@@ -352,6 +352,11 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
         for (var i = 0; i < colli.length; i++) _riga('${t.t('collo')} ${i + 1}', _misureCollo(colli[i], t.lingua)),
         _persona(t.t('mittente'), s['mitt']),
         _persona(t.t('destinatario'), s['dest']),
+        // 24.11.26: punti scelti (Home to Point, Point to Point...)
+        if (s['punti'] is Map) ...[
+          _punto(t.t('punto_partenza'), (s['punti'] as Map)['mittente']),
+          _punto(t.t('punto_arrivo'), (s['punti'] as Map)['destinazione']),
+        ],
         // Nota 373 V18: ritiro prenotato (o chiesto) con la spedizione
         if (s['ritiro'] is Map) ...[
           const SizedBox(height: 20),
@@ -529,6 +534,52 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
             child: Text(righe, style: const TextStyle(fontSize: 13)),
           ),
         ),
+        _googleIndirizzo([dati['societa'], dati['indirizzo'], dati['citta'], dati['nazione']]),
+      ]),
+    );
+  }
+
+  /// 24.11.26: la «G» di Google apre la scheda del luogo su Google Maps, come nel gestionale
+  Widget _googleIndirizzo(List<dynamic> parti) {
+    final cerca = parti.map((v) => '${v ?? ''}'.trim()).where((v) => v.isNotEmpty).join(', ');
+    if (cerca.isEmpty) return const SizedBox.shrink();
+    return IconButton(
+      tooltip: 'Google',
+      visualDensity: VisualDensity.compact,
+      icon: Image.asset('assets/immagini/google_g.png', width: 20, height: 20),
+      onPressed: () async {
+        final url = Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': cerca});
+        try {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      },
+    );
+  }
+
+  /// Punto scelto, nello stile di mittente e destinatario: nome, indirizzo, luogo e orari
+  Widget _punto(String etichetta, dynamic p) {
+    if (p is! Map) return const SizedBox.shrink();
+    final nome = '${p['nome'] ?? ''}'.trim();
+    final tipo = '${p['tipo'] ?? ''}'.trim();
+    final righe = [
+      tipo.isNotEmpty && !nome.toLowerCase().startsWith(tipo.toLowerCase()) ? '$tipo · $nome' : nome,
+      '${p['indirizzo'] ?? ''}'.trim(),
+      '${p['luogo'] ?? ''}'.trim(),
+      '${p['orari'] ?? ''}'.trim(),
+    ].where((v) => v.isNotEmpty).join('\n');
+    if (righe.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 111, child: Text(etichetta, style: TextStyle(color: Stile.grigio, fontSize: 13))),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.only(left: 8),
+            decoration: BoxDecoration(border: Border(left: BorderSide(color: context.colori.bordo))),
+            child: Text(righe, style: const TextStyle(fontSize: 13)),
+          ),
+        ),
+        _googleIndirizzo([p['nome'], p['indirizzo'], p['luogo']]),
       ]),
     );
   }
