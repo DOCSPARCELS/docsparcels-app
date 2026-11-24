@@ -11,6 +11,7 @@ import 'dettaglio_spedizione.dart';
 import 'entrata.dart';
 import 'le_mie_spedizioni.dart';
 import 'mio_profilo.dart';
+import 'notifiche.dart';
 import 'nuova_spedizione.dart';
 import 'pagamenti_fatture.dart';
 import 'prenota_ritiro.dart';
@@ -96,6 +97,7 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       Notifiche.attiva(Testi.di(context).lingua);
       // Una notifica toccata ad app chiusa apre ora il dettaglio della spedizione
       Notifiche.profiloPronto();
+      Notifiche.aggiornaNumero();
     } on ErroreApi catch (e) {
       if (e.codice == 'chiave_non_valida') {
         await Api.esci();
@@ -143,7 +145,33 @@ class SchermataProfiloState extends State<SchermataProfilo> {
       // Nota 390: nel tema chiaro lo sfondo della home e' un po' piu' scuro del bianco
       backgroundColor: context.temaScuro ? null : Stile.sfondoHomeChiaro,
       appBar: barraApp(context,
-          fondo: context.temaScuro ? context.colori.fondo : Stile.sfondoHomeChiaro, azioni: [
+          fondo: context.temaScuro ? context.colori.fondo : Stile.sfondoHomeChiaro,
+          // Nota 392 V2: campanella con le non lette, di fronte all'avatar e alla stessa distanza dal bordo
+          larghezzaInizio: 62,
+          inizio: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: ValueListenableBuilder<int>(
+              valueListenable: Notifiche.nonLette,
+              builder: (context, numero, _) => InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _io == null ? null : () => _apri(const SchermataNotifiche()),
+                child: SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: Center(
+                    child: Badge(
+                      isLabelVisible: numero > 0,
+                      backgroundColor: Stile.rosso,
+                      textColor: Colors.white,
+                      label: Text(numero > 99 ? '99+' : '$numero'),
+                      child: const Icon(Symbols.notifications, color: Stile.verde, size: 32, fill: 1),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          azioni: [
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: InkWell(

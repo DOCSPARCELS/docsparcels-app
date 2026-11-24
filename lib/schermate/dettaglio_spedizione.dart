@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../servizi/api.dart';
+import '../servizi/notifiche.dart';
 import '../stile.dart';
 import '../widget/barra.dart';
 import '../testi.dart';
@@ -40,6 +41,8 @@ class _SchermataDettaglioSpedizioneState extends State<SchermataDettaglioSpedizi
   void initState() {
     super.initState();
     _carica();
+    // Nota 392 V2: aprendo la spedizione le sue notifiche diventano lette, anche sul sito
+    if (!widget.vecchia) Notifiche.segnaLette(spedizioneId: widget.id);
   }
 
   Testi get _t => Testi.di(context);

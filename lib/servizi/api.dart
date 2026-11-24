@@ -202,6 +202,17 @@ class Api {
       _corpo(await _manda(() async => http.post(_url(percorso), headers: await _intestazioni(), body: jsonEncode(dati)),
           tempo: tempo));
 
+  // ------------------------------------------------------------ notifiche (nota 392 V2)
+
+  /// Ultime notifiche del cliente e quante non lette degli ultimi 30 giorni (non_lette_recenti).
+  static Future<Map<String, dynamic>> notifiche() async => _getCorpo('/cliente/api/notifiche');
+
+  /// Segna lette una notifica ([id]), quelle di una spedizione ([spedizioneId]) o tutte (nessuno dei due).
+  static Future<void> segnaNotificheLette({int? id, int? spedizioneId}) async {
+    await _postCorpo('/cliente/api/notifiche/segna_lette',
+        {if (id != null) 'id': id, if (spedizioneId != null) 'spedizione_id': spedizioneId});
+  }
+
   /// Mittente dall'anagrafica, tipologie, imballaggi, assicurazione, prima data valida.
   static Future<Map<String, dynamic>> datiNuovaSpedizione() async =>
       ((await _getCorpo('/cliente/api/nuova_spedizione/dati'))['data'] as Map<String, dynamic>?) ?? {};

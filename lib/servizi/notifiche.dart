@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,8 @@ class Notifiche {
     try {
       final iniziale = await FirebaseMessaging.instance.getInitialMessage();
       _daAprire = _spedizioneDi(iniziale) ?? _daAprire;
+      // una notifica arrivata con l'app aperta: la campanella si aggiorna (nota 392 V2)
+      FirebaseMessaging.onMessage.listen((_) => aggiornaNumero());
       FirebaseMessaging.onMessageOpenedApp.listen((messaggio) {
         final id = _spedizioneDi(messaggio);
         if (id == null) return;
@@ -35,6 +38,33 @@ class Notifiche {
     } catch (_) {
       // senza Firebase niente notifiche da aprire
     }
+  }
+
+  /// Non lette degli ultimi 30 giorni: campanella della home e numero sull'icona (nota 392 V2).
+  static final nonLette = ValueNotifier<int>(0);
+
+  /// Rilegge il numero dal gestionale e lo rimette sull'icona dell'app.
+  static Future<void> aggiornaNumero() async {
+    try {
+      final r = await Api.notifiche();
+      mostraNumero((r['non_lette_recenti'] as num?)?.toInt() ?? 0);
+    } catch (_) {
+      // senza rete resta il numero di prima
+    }
+  }
+
+  static void mostraNumero(int numero) {
+    nonLette.value = numero;
+    // su alcuni telefoni Android il numero non si puo' mostrare: si ignora
+    AppBadgePlus.updateBadge(numero).catchError((_) {});
+  }
+
+  /// Segna lette (una, quelle di una spedizione o tutte) e aggiorna il numero.
+  static Future<void> segnaLette({int? id, int? spedizioneId}) async {
+    try {
+      await Api.segnaNotificheLette(id: id, spedizioneId: spedizioneId);
+    } catch (_) {}
+    await aggiornaNumero();
   }
 
   /// Solo le notifiche che portano alla scheda di una spedizione (non eliminate o annullate).
@@ -89,6 +119,7 @@ class Notifiche {
   static Future<void> disattiva() async {
     _profiloPronto = false;
     _daAprire = null;
+    mostraNumero(0);
     final codice = _codice ?? await _codiceAttuale();
     if (codice == null) return;
     try {

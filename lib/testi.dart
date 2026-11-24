@@ -150,6 +150,9 @@ class Testi {
       'filtro_bozze': 'Bozze',
       'stato_bozza': 'Bozza', // nota 390
       'contatti': 'Contatti', // 24.11.26
+      'notifiche': 'Notifiche', // nota 392 V2
+      'segna_tutte_lette': 'Segna tutte come lette',
+      'nessuna_notifica': 'Nessuna notifica',
       'spedisci_a_contatto': 'Spedisci a questo indirizzo',
       'cerca_spedizione': 'Cerca per MOS, AWB, destinatario o città',
       'nessuna_spedizione': 'Nessuna spedizione',
@@ -364,6 +367,9 @@ class Testi {
     },
     'en': {
       'contatti': 'Contacts', // 24.11.26
+      'notifiche': 'Notifications', // nota 392 V2
+      'segna_tutte_lette': 'Mark all as read',
+      'nessuna_notifica': 'No notifications',
       'spedisci_a_contatto': 'Ship to this address',
       'stato_bozza': 'Draft', // nota 390
       'domanda_biometria': 'Do you want to use Face ID or your fingerprint to sign in next time?',
@@ -700,6 +706,9 @@ class Testi {
     },
     'es': {
       'contatti': 'Contactos', // 24.11.26
+      'notifiche': 'Notificaciones', // nota 392 V2
+      'segna_tutte_lette': 'Marcar todas como leídas',
+      'nessuna_notifica': 'Ninguna notificación',
       'spedisci_a_contatto': 'Enviar a esta dirección',
       'stato_bozza': 'Borrador', // nota 390
       'domanda_biometria': '¿Quieres usar Face ID o la huella para entrar las próximas veces?',
@@ -1036,6 +1045,9 @@ class Testi {
     },
     'fr': {
       'contatti': 'Contacts', // 24.11.26
+      'notifiche': 'Notifications', // nota 392 V2
+      'segna_tutte_lette': 'Tout marquer comme lu',
+      'nessuna_notifica': 'Aucune notification',
       'spedisci_a_contatto': 'Expédier à cette adresse',
       'stato_bozza': 'Brouillon', // nota 390
       'domanda_biometria': "Voulez-vous utiliser Face ID ou votre empreinte pour vous connecter la prochaine fois ?",
@@ -1372,6 +1384,9 @@ class Testi {
     },
     'de': {
       'contatti': 'Kontakte', // 24.11.26
+      'notifiche': 'Benachrichtigungen', // nota 392 V2
+      'segna_tutte_lette': 'Alle als gelesen markieren',
+      'nessuna_notifica': 'Keine Benachrichtigungen',
       'spedisci_a_contatto': 'An diese Adresse senden',
       'stato_bozza': 'Entwurf', // nota 390
       'domanda_biometria': 'Möchten Sie beim nächsten Mal Face ID oder Ihren Fingerabdruck zum Anmelden verwenden?',

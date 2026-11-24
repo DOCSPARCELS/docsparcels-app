@@ -22,7 +22,8 @@ class LogoApp extends StatelessWidget {
 /// - Tutte le altre (nota 373 V8): titolo della pagina al centro, logo piccolo a destra;
 ///   toccando il logo si torna sempre alla pagina principale.
 PreferredSizeWidget barraApp(BuildContext context,
-    {String? titolo, String? prefisso, List<Widget>? azioni, PreferredSizeWidget? sotto, Widget? inizio, Color? fondo}) {
+    {String? titolo, String? prefisso, List<Widget>? azioni, PreferredSizeWidget? sotto, Widget? inizio, Color? fondo,
+    double? larghezzaInizio}) {
   if (titolo == null) {
     return AppBar(
       toolbarHeight: 78,
@@ -31,6 +32,7 @@ PreferredSizeWidget barraApp(BuildContext context,
       backgroundColor: fondo,
       scrolledUnderElevation: fondo == null ? null : 0,
       leading: inizio,
+      leadingWidth: larghezzaInizio,
       title: const LogoApp(altezza: 48), // nota 373 V23: piu' grande solo nella home
       actions: azioni,
       bottom: sotto,
