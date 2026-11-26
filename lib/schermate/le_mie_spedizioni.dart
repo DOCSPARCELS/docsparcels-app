@@ -42,6 +42,9 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
   /// Nota 373 V5: nelle Bozze anche le spedizioni con una richiesta di pagamento aperta
   List<Map<String, dynamic>> _daPagare = [];
 
+  /// Nota 406: testi del sito per conferma, richiesta inviata e richiesta in corso, nella lingua del cliente
+  Map<String, dynamic> _testiElim = {};
+
   bool get _bozze => _filtri[_schede.index] == 'bozze';
 
   @override
@@ -117,6 +120,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
       if (!mounted || giro != _giro) return;
       setState(() {
         _righe.addAll(((r['spedizioni'] as List?) ?? []).cast<Map<String, dynamic>>());
+        _testiElim = (r['testi_eliminazione'] as Map<String, dynamic>?) ?? _testiElim;
         _pagina = (r['pagina'] as int?) ?? _pagina + 1;
         _pagine = (r['pagine'] as int?) ?? _pagina;
         _totale = (r['totale'] as int?) ?? _righe.length;
@@ -292,7 +296,7 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                 ),
               );
             }
-            return _riga(t, righe[i]);
+            return _scorrevole(t, righe[i]);
           },
         ),
       ),
@@ -339,6 +343,94 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
 
   static bool _bozza(Map<String, dynamic> r) =>
       r['da_pagare'] != true && const {'bozza', 'da_completare'}.contains('${r['tipo']}');
+
+  // ------------------------------------------------------------ eliminare scorrendo (nota 406)
+
+  /// Scorrendo da destra a sinistra: bozza eliminata, spedizione generata con richiesta all'assistenza.
+  /// Il server dice cosa si puo' fare (campo «elimina», stesse regole del sito); dove non si puo' la riga
+  /// non scorre.
+  Widget _scorrevole(Testi t, Map<String, dynamic> r) {
+    final azione = r['da_pagare'] == true ? null : r['elimina'] as String?;
+    if (azione == null) return _riga(t, r);
+    return Dismissible(
+      key: ValueKey('${r['tipo']}-${r['id']}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: const BoxDecoration(color: Stile.rosso, borderRadius: Stile.angoli),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.delete_outline, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(t.t('elimina'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+      confirmDismiss: (_) => _elimina(t, r, azione),
+      onDismissed: (_) => setState(() {
+        _righe.remove(r);
+        if (_totale > 0) _totale--;
+      }),
+      child: _riga(t, r),
+    );
+  }
+
+  /// true = la riga sparisce (bozza eliminata); false = resta (richiesta inviata, annullato o errore).
+  Future<bool> _elimina(Testi t, Map<String, dynamic> r, String azione) async {
+    final richiesta = azione == 'richiesta';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+        content: Text(richiesta ? '${_testiElim['elim_conferma'] ?? ''}' : t.t('conferma_elimina_bozza'),
+            textAlign: TextAlign.center),
+        actions: [
+          Row(children: [
+            Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(c, false), child: Text(t.t('annulla')))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Stile.rosso),
+                onPressed: () => Navigator.pop(c, true),
+                child: Text(t.t('elimina')),
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return false;
+    final id = r['id'] as int;
+    try {
+      if (azione == 'bozza') {
+        await Api.eliminaBozza(id);
+        return true;
+      }
+      if (azione == 'da_completare') {
+        await Api.eliminaDaCompletare(id);
+        return true;
+      }
+      final messaggio = await Api.richiediEliminazione(id);
+      if (!mounted) return false;
+      // La spedizione resta: non scorre piu' e mostra «richiesta in corso» finche' l'assistenza non la elimina
+      setState(() {
+        r['elimina'] = null;
+        r['eliminazione_richiesta'] = true;
+      });
+      await _avviso(messaggio ?? '${_testiElim['elim_richiesta_inviata'] ?? ''}');
+    } on ErroreApi catch (e) {
+      if (mounted) await _avviso(e.messaggio ?? _t.errore(e.codice));
+    }
+    return false;
+  }
+
+  Future<void> _avviso(String testo) => showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          shape: const RoundedRectangleBorder(borderRadius: Stile.angoli),
+          content: Text(testo, textAlign: TextAlign.center),
+          actions: [ElevatedButton(onPressed: () => Navigator.pop(c), child: Text(_t.t('chiudi')))],
+        ),
+      );
 
   Widget _riga(Testi t, Map<String, dynamic> r) {
     final lavorazione = _inLavorazione(r);
@@ -424,6 +516,26 @@ class _SchermataLeMieSpedizioniState extends State<SchermataLeMieSpedizioni> wit
                         style: TextStyle(color: _scuro(colore), fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ),
+              ),
+            ],
+            // Nota 406: richiesta di eliminazione aperta, come il sito; sparisce quando l'assistenza elimina
+            if (r['eliminazione_richiesta'] == true) ...[
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                    color: Stile.rosso.withValues(alpha: 0.08),
+                    border: Border.all(color: Stile.rosso),
+                    borderRadius: Stile.angoli),
+                child: Row(children: [
+                  const Icon(Icons.delete_outline, color: Stile.rosso, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text('${_testiElim['elim_richiesta_aperta'] ?? ''}',
+                        style: const TextStyle(color: Stile.rosso, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                ]),
               ),
             ],
             if (bozza) ...[

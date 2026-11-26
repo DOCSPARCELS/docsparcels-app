@@ -273,6 +273,15 @@ class Api {
     await _postCorpo('/cliente/api/elimina_bozze', {'ids': [bozzaId]});
   }
 
+  /// Nota 406: spedizione non generata e non inviata («da completare»), come il cestino del sito.
+  static Future<void> eliminaDaCompletare(int id) async {
+    await _postCorpo('/cliente/api/elimina_bozze_da_completare', {'ids': [id]});
+  }
+
+  /// Nota 406: spedizione generata, l'eliminazione la fa l'assistenza. Ritorna il messaggio del server.
+  static Future<String?> richiediEliminazione(int id) async =>
+      (await _postCorpo('/cliente/api/richiedi_eliminazione/$id', {}))['messaggio'] as String?;
+
   /// Pagamento con carta non completato: la spedizione torna bozza.
   static Future<void> annullaPagamento(int spedizioneId) async {
     await _postCorpo('/cliente/api/annulla_pagamento_spedizione/$spedizioneId', {});
